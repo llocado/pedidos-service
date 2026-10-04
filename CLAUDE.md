@@ -31,8 +31,8 @@ Diseño completo del proyecto: `../app-productos/docs/ROADMAP.md`.
   (`EventoProcesadoPort`), pensada para reutilizarse en listeners futuros
   (ej. `pago.aprobado`/`pago.rechazado`).
 - Declara de forma defensiva e idempotente el exchange `carrito.events`,
-  que en rigor es propiedad de `carrito-service` — necesario porque ese
-  servicio todavía no lo publica.
+  que en rigor es propiedad de `carrito-service` (que también lo declara) —
+  así la cola se puede bindear aunque ese servicio no haya arrancado.
 - El id de usuario nunca viene del cliente: siempre sale del claim `sub`
   del JWT validado por Spring Security.
 
@@ -50,7 +50,8 @@ deja que `CarritoEventListener` lo consuma de punta a punta, sin mockear
 nada del pipeline de mensajería — incluye un caso de reentrega del mismo
 evento para probar idempotencia.
 
-Para probar el flujo a mano sin que `carrito-service` publique todavía:
+El flujo real: `POST /api/carrito/checkout` en `carrito-service` publica el
+evento y este servicio crea el pedido. Para probar este servicio aislado,
 publicar el mensaje directo en RabbitMQ (UI en `localhost:15672`, exchange
 `carrito.events`, routing key `carrito.checkout-iniciado`) — ver
 `docs/events/carrito.checkout-iniciado.schema.json` para el payload.

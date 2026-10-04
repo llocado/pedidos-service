@@ -8,7 +8,7 @@ Documentacion de contrato para el bus de eventos (RabbitMQ), segun lo definido e
 
 ## Consume (consumidor)
 
-- **`carrito.checkout-iniciado`** — [carrito.checkout-iniciado.schema.json](./carrito.checkout-iniciado.schema.json). Exchange `carrito.events` (topic), propiedad de `carrito-service`. **Este schema es una copia de referencia**: la fuente de verdad real es `carrito-service/docs/events/` una vez que ese servicio implemente su caso de uso de checkout (todavia no existe al momento de escribir esto). Si el schema publicado ahi difiere de esta copia, ese es el que manda -- actualizar este archivo para que coincida.
+- **`carrito.checkout-iniciado`** — [carrito.checkout-iniciado.schema.json](./carrito.checkout-iniciado.schema.json). Exchange `carrito.events` (topic), propiedad de `carrito-service`. **Este schema es una copia de referencia**: la fuente de verdad es `carrito-service/docs/events/` (publicado por `IniciarCheckoutUseCase` en `POST /api/carrito/checkout`). Si el schema publicado ahi difiere de esta copia, ese es el que manda -- actualizar este archivo para que coincida.
 
 ## Idempotencia
 

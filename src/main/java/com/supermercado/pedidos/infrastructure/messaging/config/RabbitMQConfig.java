@@ -21,7 +21,7 @@ import org.springframework.context.annotation.Configuration;
  * de carrito.events se declara igual aqui, de forma defensiva e idempotente:
  * RabbitMQ no falla si dos servicios declaran el mismo exchange con las
  * mismas propiedades, y esto permite bindear la cola aunque carrito-service
- * todavia no exista o no haya arrancado.
+ * todavia no haya arrancado.
  */
 @Configuration
 public class RabbitMQConfig {

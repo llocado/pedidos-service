@@ -26,8 +26,9 @@ proyecto (decisiones de arquitectura, mapa de servicios, contrato de eventos).
   de checkout.
 - **Primer servicio del proyecto en tocar RabbitMQ de verdad.** Declara
   (de forma defensiva e idempotente) el exchange `carrito.events`, que en
-  rigor es propiedad de `carrito-service` — necesario porque ese servicio
-  todavía no publica el evento. Ver `docs/events/README.md`.
+  rigor es propiedad de `carrito-service` (que también lo declara, con las
+  mismas propiedades) — así la cola se puede bindear aunque `carrito-service`
+  no haya arrancado todavía. Ver `docs/events/README.md`.
 - **El id de usuario nunca viene del cliente.** Siempre sale del claim `sub`
   del JWT validado por Spring Security.
 
@@ -43,8 +44,10 @@ docker compose up -d          # Postgres de este servicio
 ./gradlew bootRun             # arranca en localhost:8082
 ```
 
-Como todavía no existe un endpoint ni un servicio que publique
-`carrito.checkout-iniciado`, para probar el flujo de creación a mano hay que
+El flujo completo se prueba con `carrito-service` corriendo: un
+`POST /api/carrito/checkout` (carrito con items) publica
+`carrito.checkout-iniciado` y este servicio crea el pedido (consultable con
+`GET /api/pedidos`). Para probar este servicio de forma aislada, se puede
 publicar el mensaje directamente en RabbitMQ (UI de management en
 `localhost:15672`, exchange `carrito.events`, routing key
 `carrito.checkout-iniciado`) — ver `docs/events/carrito.checkout-iniciado.schema.json`

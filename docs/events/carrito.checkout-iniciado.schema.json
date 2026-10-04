@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://supermercado.local/schemas/carrito.checkout-iniciado.v1.json",
   "title": "carrito.checkout-iniciado",
-  "description": "Copia de referencia -- la fuente de verdad es carrito-service/docs/events/ una vez que exista (ver README.md de esta carpeta).",
+  "description": "Copia de referencia -- la fuente de verdad es carrito-service/docs/events/ (ver README.md de esta carpeta).",
   "type": "object",
   "required": ["eventId", "eventType", "eventVersion", "occurredAt", "producer", "payload"],
   "properties": {
