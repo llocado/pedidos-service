@@ -3,6 +3,8 @@ plugins {
 	id 'jvm-test-suite'
 	id 'org.springframework.boot' version '4.1.0'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'jacoco'
+	id 'org.sonarqube' version '7.5.0.8588'
 }
 
 group = 'com.supermercado'
@@ -100,4 +102,43 @@ dependencies {
 
 	intTestCompileOnly 'org.projectlombok:lombok'
 	intTestAnnotationProcessor 'org.projectlombok:lombok'
+}
+
+// --- Cobertura (JaCoCo) y analisis estatico (SonarQube) ---
+jacoco {
+	toolVersion = '0.8.15'
+}
+
+// Cobertura combinada de test (unitarios) + intTest (integracion): los tests de
+// integracion cubren adaptadores (JPA, REST, RabbitMQ) que los unitarios no tocan.
+// Requiere Docker (intTest). Informe: build/reports/jacoco/jacocoFullReport/index.html
+tasks.register('jacocoFullReport', JacocoReport) {
+	group = 'verification'
+	description = 'Informe JaCoCo combinado de test + intTest (HTML y XML).'
+	dependsOn tasks.named('test'), tasks.named('intTest')
+	executionData.from(layout.buildDirectory.files('jacoco/test.exec', 'jacoco/intTest.exec'))
+	sourceSets sourceSets.main
+	classDirectories.setFrom(files(sourceSets.main.output.classesDirs.files.collect {
+		fileTree(dir: it, exclude: ['**/*Application.class'])
+	}))
+	reports {
+		xml.required = true
+		html.required = true
+	}
+}
+
+// Uso: SONAR_TOKEN=<token> ./gradlew sonar   (SonarQube local de supermercado-infra)
+sonar {
+	properties {
+		property 'sonar.projectKey', 'supermercado-pedidos'
+		property 'sonar.projectName', 'pedidos-service'
+		property 'sonar.host.url', System.getenv('SONAR_HOST_URL') ?: 'http://localhost:9000'
+		property 'sonar.coverage.jacoco.xmlReportPaths',
+				layout.buildDirectory.file('reports/jacoco/jacocoFullReport/jacocoFullReport.xml').get().asFile.path
+		property 'sonar.exclusions', '**/*Application.java'
+	}
+}
+
+tasks.named('sonar') {
+	dependsOn tasks.named('jacocoFullReport')
 }

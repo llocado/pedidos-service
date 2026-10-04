@@ -43,6 +43,8 @@ docker compose up -d      # Postgres de este servicio
 ./gradlew bootRun          # arranca en localhost:8082
 ./gradlew test             # unitarios (dominio, casos de uso)
 ./gradlew intTest          # integración: Testcontainers (Postgres + RabbitMQ)
+./gradlew jacocoFullReport   # cobertura test + intTest -> build/reports/jacoco/jacocoFullReport/index.html
+./gradlew sonar              # analisis SonarQube (ver ../CLAUDE.md: requiere SONAR_TOKEN y el perfil `calidad`)
 ```
 
 El test de integración publica un evento real en RabbitMQ (Testcontainers) y
