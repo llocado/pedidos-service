@@ -1,13 +1,16 @@
 package com.supermercado.pedidos.infrastructure.messaging.config;
 
+import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.support.converter.MessageConversionException;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.boot.amqp.autoconfigure.RabbitListenerRetrySettingsCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -81,5 +84,34 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(checkoutIniciadoQueue())
                 .to(carritoEventsExchange())
                 .with(ROUTING_KEY_CHECKOUT_INICIADO);
+    }
+
+    /**
+     * Los reintentos son para fallos transitorios. No se reintenta un mensaje que
+     * el listener ya rechazo de forma definitiva (AmqpRejectAndDontRequeueException,
+     * a veces envuelta en otra excepcion) ni uno que Spring AMQP clasifica como
+     * fatal (por ejemplo, JSON que no se puede leer): ambos van directo a la DLQ.
+     */
+    @Bean
+    public RabbitListenerRetrySettingsCustomizer noReintentarRechazosDefinitivos() {
+        return settings -> settings.setExceptionPredicate(error -> !esIrrecuperable(error));
+    }
+
+    /**
+     * Recorre la cadena de causas: Spring envuelve el error real del listener en
+     * otra excepcion. Los tipos de conversion/firma son los que Spring AMQP
+     * considera fatales (reintentar no los arregla).
+     */
+    private static boolean esIrrecuperable(Throwable error) {
+        for (Throwable actual = error; actual != null; actual = actual.getCause() == actual ? null : actual.getCause()) {
+            if (actual instanceof AmqpRejectAndDontRequeueException
+                    || actual instanceof MessageConversionException
+                    || actual instanceof org.springframework.messaging.converter.MessageConversionException
+                    || actual instanceof ClassCastException
+                    || actual instanceof NoSuchMethodException) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -29,6 +29,15 @@ proyecto (decisiones de arquitectura, mapa de servicios, contrato de eventos).
   rigor es propiedad de `carrito-service` (que también lo declara, con las
   mismas propiedades) — así la cola se puede bindear aunque `carrito-service`
   no haya arrancado todavía. Ver `docs/events/README.md`.
+- **Política de errores del listener (nunca reencolar en bucle).** Un mensaje
+  irrecuperable (JSON ilegible, payload inválido, regla de dominio violada) va
+  a la DLQ de inmediato, sin reintentos. Un fallo transitorio (por ejemplo, la
+  base de datos caída) se reintenta: 1 intento + 3 reintentos con esperas de
+  1 s, 2 s y 4 s, y luego va a la DLQ. Antes un mensaje que fallaba se
+  reencolaba sin fin (cientos de miles de líneas de log por segundo). Los logs
+  llevan `eventId` y `correlationId`, nunca el payload completo. Para
+  reprocesar la DLQ hay que revisarla en la UI de RabbitMQ
+  (`pedidos.carrito-checkout-iniciado.dlq`).
 - **El id de usuario nunca viene del cliente.** Siempre sale del claim `sub`
   del JWT validado por Spring Security.
 

@@ -7,6 +7,9 @@ spring:
     username: ${DB_USER:pedidos_user}
     password: ${DB_PASSWORD:pedidos_password}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      # Con la base caida, falla en 5 s (por defecto 30 s) en vez de dejar hilos y reintentos esperando.
+      connection-timeout: ${DB_CONNECTION_TIMEOUT:5000}
 
   jpa:
     open-in-view: false
@@ -14,7 +17,7 @@ spring:
       # El esquema lo gestiona Liquibase; Hibernate solo valida que las
       # entidades coincidan con lo que Liquibase ya creo.
       ddl-auto: validate
-    show-sql: true
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
         format_sql: true
@@ -34,6 +37,31 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:supermercado}
     password: ${RABBITMQ_PASSWORD:supermercado}
+    listener:
+      simple:
+        # Un mensaje que falla NUNCA se reencola: tras los reintentos va a la DLQ
+        # (sin esto, RabbitMQ lo reentregaba en bucle infinito).
+        default-requeue-rejected: false
+        # 1 intento original + 3 reintentos (esperas de 1s, 2s y 4s); luego va a la DLQ.
+        # Los rechazos definitivos (payload invalido) no se reintentan: ver RabbitMQConfig.
+        retry:
+          enabled: true
+          max-retries: 3
+          initial-interval: 1s
+          multiplier: 2
+          max-interval: 10s
 
 server:
   port: ${SERVER_PORT:8082}
+
+logging:
+  level:
+    root: INFO
+    com.supermercado: INFO
+    # Este handler escribe ~90 lineas de stack trace por cada mensaje rechazado; el listener ya registra
+    # una linea concisa con el eventId, y los fallos tras los reintentos los registra RejectAndDontRequeueRecoverer.
+    org.springframework.amqp.rabbit.listener.ConditionalRejectingErrorHandler: ERROR
+  pattern:
+    # Agrega [requestId|correlationId] y reemplaza saltos de linea en el mensaje:
+    # evita que un valor controlado por un cliente falsifique lineas de log.
+    console: "%clr(%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}){faint} %clr(%5p) %clr(${PID:-}){magenta} %clr(---){faint} ${LOGGED_APPLICATION_NAME:-}%clr([%15.15t]){faint} %clr([%X{requestId:-}|%X{correlationId:-}]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %replace(%m){'[\\r\\n]','_'}%n%wEx"
