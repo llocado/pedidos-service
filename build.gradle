@@ -1,0 +1,102 @@
+plugins {
+	id 'java'
+	id 'jvm-test-suite'
+	id 'org.springframework.boot' version '4.1.0'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.supermercado'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+// Versiones parcheadas por vulnerabilidades conocidas (GHSA) en las que gestiona Spring Boot 4.1.0.
+ext['tomcat.version'] = '11.0.25'
+ext['jackson-bom.version'] = '3.1.7'
+ext['log4j2.version'] = '2.25.5'
+ext['netty.version'] = '4.2.17.Final'
+ext['rabbit-amqp-client.version'] = '5.34.0'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+	implementation 'org.springframework.boot:spring-boot-starter-amqp'
+	implementation 'org.springframework.boot:spring-boot-liquibase'
+	implementation 'org.liquibase:liquibase-core'
+
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	runtimeOnly 'org.postgresql:postgresql'
+
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	testImplementation 'org.springframework.security:spring-security-test'
+	testImplementation 'org.springframework.amqp:spring-rabbit-test'
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+testing {
+	suites {
+		test {
+			useJUnitJupiter()
+		}
+
+		intTest(JvmTestSuite) {
+			useJUnitJupiter()
+
+			targets {
+				all {
+					testTask.configure {
+						group = 'verification'
+						description = 'Ejecuta los tests de integracion (Testcontainers + PostgreSQL + RabbitMQ) del proyecto.'
+						shouldRunAfter(test)
+					}
+				}
+			}
+		}
+	}
+}
+
+dependencies {
+	intTestImplementation platform('org.springframework.boot:spring-boot-dependencies:4.1.0')
+
+	intTestImplementation project()
+
+	intTestImplementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	intTestImplementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	intTestImplementation 'org.springframework.boot:spring-boot-starter-validation'
+	intTestImplementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+	intTestImplementation 'org.springframework.boot:spring-boot-starter-amqp'
+	intTestImplementation 'org.springframework.boot:spring-boot-starter-test'
+	intTestImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	intTestImplementation 'org.springframework.security:spring-security-test'
+	intTestImplementation 'org.springframework.amqp:spring-rabbit-test'
+
+	intTestImplementation 'org.springframework.boot:spring-boot-testcontainers'
+	intTestImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+	intTestImplementation 'org.testcontainers:testcontainers-postgresql'
+	intTestImplementation 'org.testcontainers:testcontainers-rabbitmq'
+	intTestImplementation 'org.awaitility:awaitility'
+
+	intTestRuntimeOnly 'org.postgresql:postgresql'
+	intTestRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	intTestCompileOnly 'org.projectlombok:lombok'
+	intTestAnnotationProcessor 'org.projectlombok:lombok'
+}

@@ -1,0 +1,29 @@
+meta {
+  name: 04 - Obtener Pedido - no encontrado
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/pedidos/:id
+  body: none
+  auth: none
+}
+
+params:path {
+  id: 11111111-1111-1111-1111-111111111111
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
+
+assert {
+  res.status: eq 404
+}
+
+docs {
+  Id que no existe (o que existe pero es de otro usuario -- ver
+  ObtenerPedidoUseCase, misma respuesta en ambos casos para no filtrar cual
+  de los dos es).
+}

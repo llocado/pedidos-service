@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://supermercado.local/schemas/pedido.creado.v1.json",
+  "title": "pedido.creado",
+  "description": "Publicado por pedidos-service cuando CrearPedidoDesdeCarritoUseCase crea un pedido a partir de un checkout.",
+  "type": "object",
+  "required": ["eventId", "eventType", "eventVersion", "occurredAt", "producer", "payload"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "pedido.creado" },
+    "eventVersion": { "const": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "producer": { "const": "pedidos-service" },
+    "correlationId": { "type": ["string", "null"], "format": "uuid" },
+    "payload": {
+      "type": "object",
+      "required": ["pedidoId", "carritoId", "usuarioId", "items", "total"],
+      "properties": {
+        "pedidoId": { "type": "string", "format": "uuid" },
+        "carritoId": { "type": "string", "format": "uuid" },
+        "usuarioId": { "type": "string" },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["productoId", "nombre", "precioUnitario", "moneda", "cantidad"],
+            "properties": {
+              "productoId": { "type": "string", "format": "uuid" },
+              "nombre": { "type": "string" },
+              "precioUnitario": { "type": "number" },
+              "moneda": { "type": "string" },
+              "cantidad": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "total": { "type": "number" }
+      }
+    }
+  }
+}

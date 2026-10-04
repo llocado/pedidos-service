@@ -1,0 +1,24 @@
+meta {
+  name: 03 - Obtener Pedido - sin token
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/pedidos/:id
+  body: none
+  auth: none
+}
+
+params:path {
+  id: 00000000-0000-0000-0000-000000000000
+}
+
+assert {
+  res.status: eq 401
+}
+
+docs {
+  Sin header Authorization. Spring Security corta antes de llegar al
+  controller.
+}

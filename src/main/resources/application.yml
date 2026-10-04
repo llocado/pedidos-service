@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: pedidos-service
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5434}/${DB_NAME:pedidos_db}
+    username: ${DB_USER:pedidos_user}
+    password: ${DB_PASSWORD:pedidos_password}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # El esquema lo gestiona Liquibase; Hibernate solo valida que las
+      # entidades coincidan con lo que Liquibase ya creo.
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Realm de Keycloak levantado por supermercado-infra.
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/supermercado}
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:supermercado}
+    password: ${RABBITMQ_PASSWORD:supermercado}
+
+server:
+  port: ${SERVER_PORT:8082}

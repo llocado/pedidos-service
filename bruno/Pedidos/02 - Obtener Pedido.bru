@@ -1,0 +1,24 @@
+meta {
+  name: 02 - Obtener Pedido
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/pedidos/:id
+  body: none
+  auth: none
+}
+
+params:path {
+  id: 00000000-0000-0000-0000-000000000000
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
+
+docs {
+  Reemplazar el path param "id" por un id real devuelto por
+  "01 - Listar Mis Pedidos".
+}

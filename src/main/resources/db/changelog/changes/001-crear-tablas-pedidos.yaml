@@ -1,0 +1,118 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-crear-tabla-pedidos
+      author: supermercado
+      changes:
+        - createTable:
+            tableName: pedidos
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_pedidos
+                    nullable: false
+              - column:
+                  name: carrito_id_origen
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: usuario_id
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total
+                  type: numeric(12,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: estado
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: creado_en
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actualizado_en
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: idx_pedidos_usuario_id
+            tableName: pedidos
+            columns:
+              - column:
+                  name: usuario_id
+
+  - changeSet:
+      id: 002-crear-tabla-items-pedido
+      author: supermercado
+      changes:
+        - createTable:
+            tableName: items_pedido
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_items_pedido
+                    nullable: false
+              - column:
+                  name: pedido_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_items_pedido_pedido
+                    references: pedidos(id)
+              - column:
+                  name: producto_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: nombre
+                  type: varchar(150)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: precio_unitario
+                  type: numeric(12,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: moneda
+                  type: varchar(3)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cantidad
+                  type: integer
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 003-crear-tabla-eventos-procesados
+      author: supermercado
+      changes:
+        - createTable:
+            tableName: eventos_procesados
+            columns:
+              - column:
+                  name: event_id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_eventos_procesados
+                    nullable: false
+              - column:
+                  name: procesado_en
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
