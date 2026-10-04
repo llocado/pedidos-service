@@ -18,15 +18,25 @@ assert {
   res.status: eq 200
 }
 
+script:post-response {
+  // Guarda el id del primer pedido (si hay) para "02 - Obtener Pedido"; vacio si el usuario no tiene pedidos.
+  const pedidos = Array.isArray(res.body) ? res.body : [];
+  bru.setVar("pedidoId", pedidos.length > 0 ? pedidos[0].id : "");
+}
+
 docs {
   Lista los pedidos del usuario autenticado (el id de usuario sale del claim
   "sub" del token). No hay endpoint para crear un pedido por REST: se crean
   solo a partir del evento carrito.checkout-iniciado (ver
-  CarritoEventListener). Mientras carrito-service no publique ese evento
-  todavia, para probar este flujo hay que publicar el mensaje a mano desde
-  la UI de RabbitMQ ({{rabbitmqManagementUrl}}), en el exchange
+  CarritoEventListener). El flujo real: "13 - Iniciar Checkout" de la
+  coleccion Carrito publica ese evento y este servicio crea el pedido.
+  Para probar este servicio de forma aislada se puede publicar el mensaje a
+  mano desde la UI de RabbitMQ ({{rabbitmqManagementUrl}}), en el exchange
   "carrito.events" con routing key "carrito.checkout-iniciado" -- ver
   docs/events/carrito.checkout-iniciado.schema.json para el payload
   esperado (el "sub" del token usado arriba debe coincidir con el
   "usuarioId" del payload).
+
+  Guarda en la variable `pedidoId` el id del primer pedido de la lista, que
+  usa "02 - Obtener Pedido".
 }

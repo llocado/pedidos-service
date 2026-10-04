@@ -5,20 +5,29 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/api/pedidos/:id
+  url: {{baseUrl}}/api/pedidos/{{pedidoId}}
   body: none
   auth: none
-}
-
-params:path {
-  id: 00000000-0000-0000-0000-000000000000
 }
 
 headers {
   Authorization: Bearer {{token}}
 }
 
+assert {
+  res.status: eq 200
+  res.body.estado: eq CREADO
+}
+
+script:pre-request {
+  // Sin pedidos no hay nada que consultar: se omite este request en vez de fallar.
+  if (!bru.getVar("pedidoId")) {
+    bru.runner.skipRequest();
+  }
+}
+
 docs {
-  Reemplazar el path param "id" por un id real devuelto por
-  "01 - Listar Mis Pedidos".
+  Consulta el primer pedido devuelto por "01 - Listar Mis Pedidos" (variable
+  `pedidoId`). Si el usuario no tiene pedidos, se omite: para crear uno corre
+  "13 - Iniciar Checkout" de la coleccion Carrito.
 }
