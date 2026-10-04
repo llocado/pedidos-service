@@ -9,9 +9,11 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CrearPedidoDesdeCarritoUseCase {
@@ -28,6 +30,7 @@ public class CrearPedidoDesdeCarritoUseCase {
     @Transactional
     public void execute(UUID eventId, UUID carritoId, String usuarioId, List<ItemCarritoComando> items) {
         if (eventoProcesadoPort.yaFueProcesado(eventId)) {
+            log.info("Evento ya procesado, se descarta el duplicado eventId={}", eventId);
             return;
         }
 
@@ -40,6 +43,8 @@ public class CrearPedidoDesdeCarritoUseCase {
 
         pedidoEventPublisherPort.publicarPedidoCreado(pedido);
         eventoProcesadoPort.marcarComoProcesado(eventId);
+        log.info("Pedido creado pedidoId={} carritoId={} usuarioId={} items={} total={}",
+                pedido.getId().getValor(), carritoId, usuarioId, itemsPedido.size(), pedido.getTotal());
     }
 
     public record ItemCarritoComando(UUID productoId, String nombre, BigDecimal precioUnitario, String moneda, int cantidad) {

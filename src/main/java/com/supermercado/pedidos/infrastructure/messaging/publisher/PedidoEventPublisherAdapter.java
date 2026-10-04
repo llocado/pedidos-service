@@ -10,10 +10,12 @@ import com.supermercado.pedidos.infrastructure.messaging.dto.PedidoCreadoPayload
 import java.time.Instant;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class PedidoEventPublisherAdapter implements PedidoEventPublisherPort {
@@ -45,6 +47,9 @@ public class PedidoEventPublisherAdapter implements PedidoEventPublisherPort {
 
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE_PEDIDOS_EVENTS, RabbitMQConfig.ROUTING_KEY_PEDIDO_CREADO, envelope);
+
+        log.info("Evento publicado eventType={} eventId={} pedidoId={}",
+                envelope.eventType(), envelope.eventId(), pedido.getId().getValor());
     }
 
     private ItemEventoDto toEventoDto(ItemPedido item) {
