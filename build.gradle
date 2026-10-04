@@ -4,6 +4,7 @@ plugins {
 	id 'org.springframework.boot' version '4.1.0'
 	id 'io.spring.dependency-management' version '1.1.7'
 	id 'jacoco'
+	id 'info.solidsoft.pitest' version '1.19.0'
 	id 'org.sonarqube' version '7.5.0.8588'
 }
 
@@ -57,11 +58,11 @@ tasks.named('test') {
 testing {
 	suites {
 		test {
-			useJUnitJupiter()
+			useJUnitJupiter('6.0.3')
 		}
 
 		intTest(JvmTestSuite) {
-			useJUnitJupiter()
+			useJUnitJupiter('6.0.3')
 
 			targets {
 				all {
@@ -141,4 +142,19 @@ sonar {
 
 tasks.named('sonar') {
 	dependsOn tasks.named('jacocoFullReport')
+}
+
+// --- Tests de mutacion (PIT) ---
+// Introduce cambios pequenos en el codigo (mutantes: invertir un if, cambiar un > por >=, ...) y
+// comprueba que algun test falle. Un mutante que sobrevive = comportamiento que los tests no vigilan.
+// Alcance: dominio, casos de uso y validacion del listener, solo con los tests unitarios (rapido, sin Docker).
+// Uso: ./gradlew pitest   Informe: build/reports/pitest/index.html
+pitest {
+	pitestVersion = '1.30.0'
+	junit5PluginVersion = '1.2.3'
+	targetClasses = ['com.supermercado.pedidos.domain.*', 'com.supermercado.pedidos.application.*', 'com.supermercado.pedidos.infrastructure.messaging.listener.*']
+	targetTests = ['com.supermercado.pedidos.domain.*', 'com.supermercado.pedidos.application.*', 'com.supermercado.pedidos.infrastructure.messaging.listener.*']
+	threads = 4
+	outputFormats = ['HTML', 'XML']
+	timestampedReports = false
 }
