@@ -33,6 +33,7 @@ public class CarritoEventListener {
 
     static final int MAX_ITEMS = 500;
     static final int MAX_TEXTO = 255;
+    static final int MAX_MONEDA = 3;
 
     private final CrearPedidoDesdeCarritoUseCase crearPedidoDesdeCarritoUseCase;
     private final ObjectMapper objectMapper;
@@ -84,19 +85,37 @@ public class CarritoEventListener {
     /** Retorna el motivo si el payload es invalido, o null si esta bien. */
     static String validar(CarritoCheckoutIniciadoPayload payload) {
         if (payload == null) return "payload nulo";
+        String motivo = validarCabecera(payload);
+        return motivo != null ? motivo : validarItems(payload.items());
+    }
+
+    private static String validarCabecera(CarritoCheckoutIniciadoPayload payload) {
         if (payload.carritoId() == null) return "falta carritoId";
-        if (payload.usuarioId() == null || payload.usuarioId().isBlank()) return "falta usuarioId";
-        if (payload.usuarioId().length() > MAX_TEXTO) return "usuarioId demasiado largo";
-        if (payload.items() == null || payload.items().isEmpty()) return "sin items";
-        if (payload.items().size() > MAX_ITEMS) return "demasiados items";
-        for (ItemEventoDto item : payload.items()) {
-            if (item == null) return "item nulo";
-            if (item.productoId() == null) return "item sin productoId";
-            if (item.nombre() == null || item.nombre().isBlank() || item.nombre().length() > MAX_TEXTO) return "item con nombre invalido";
-            if (item.precioUnitario() == null || item.precioUnitario().signum() < 0) return "item con precio invalido";
-            if (item.moneda() == null || item.moneda().isBlank() || item.moneda().length() > 3) return "item con moneda invalida";
-            if (item.cantidad() <= 0) return "item con cantidad invalida";
+        if (textoInvalido(payload.usuarioId(), MAX_TEXTO)) return "usuarioId ausente o demasiado largo";
+        return null;
+    }
+
+    private static String validarItems(List<ItemEventoDto> items) {
+        if (items == null || items.isEmpty()) return "sin items";
+        if (items.size() > MAX_ITEMS) return "demasiados items";
+        for (ItemEventoDto item : items) {
+            String motivo = validarItem(item);
+            if (motivo != null) return motivo;
         }
         return null;
+    }
+
+    private static String validarItem(ItemEventoDto item) {
+        if (item == null) return "item nulo";
+        if (item.productoId() == null) return "item sin productoId";
+        if (textoInvalido(item.nombre(), MAX_TEXTO)) return "item con nombre invalido";
+        if (item.precioUnitario() == null || item.precioUnitario().signum() < 0) return "item con precio invalido";
+        if (textoInvalido(item.moneda(), MAX_MONEDA)) return "item con moneda invalida";
+        if (item.cantidad() <= 0) return "item con cantidad invalida";
+        return null;
+    }
+
+    private static boolean textoInvalido(String texto, int maximo) {
+        return texto == null || texto.isBlank() || texto.length() > maximo;
     }
 }
