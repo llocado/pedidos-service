@@ -57,7 +57,5 @@ publicar el mensaje directo en RabbitMQ (UI en `localhost:15672`, exchange
 
 ## Estado del repo (importante)
 
-- **Todavía no es un repo git** — solo archivos en disco. `git init` +
-  primer commit quedan pendientes de que el usuario lo confirme
-  explícitamente (regla general: nunca commitear sin confirmación, nunca
-  pushear sin que lo pida).
+- Rama `main` con el código completo commiteado localmente, **sin remoto
+  configurado** (nada pusheado).
