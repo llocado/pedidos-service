@@ -57,5 +57,5 @@ publicar el mensaje directo en RabbitMQ (UI en `localhost:15672`, exchange
 
 ## Estado del repo (importante)
 
-- Rama `main` con el código completo commiteado localmente, **sin remoto
-  configurado** (nada pusheado).
+- Repo en GitHub (`llocado/pedidos-service`), rama `main` con el código
+  completo.
