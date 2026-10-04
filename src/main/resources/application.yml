@@ -37,6 +37,8 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:supermercado}
     password: ${RABBITMQ_PASSWORD:supermercado}
+    # Con RabbitMQ inalcanzable falla en 5 s (por defecto ~60 s) en vez de dejar hilos esperando.
+    connection-timeout: ${RABBITMQ_CONNECTION_TIMEOUT:5s}
     listener:
       simple:
         # Un mensaje que falla NUNCA se reencola: tras los reintentos va a la DLQ

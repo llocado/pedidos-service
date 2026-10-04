@@ -47,18 +47,19 @@ public class RequestIdFilter extends OncePerRequestFilter {
         MDC.put(MDC_KEY, requestId);
         response.setHeader(HEADER, requestId);
         long inicio = System.nanoTime();
-        boolean fallo = false;
+        boolean completado = false;
         try {
             chain.doFilter(request, response);
+            completado = true;
         } catch (ServletException | IOException | RuntimeException e) {
-            fallo = true;
             // El stack trace lo escribe Tomcat al salir de este filtro, cuando el MDC ya no existe: esta
             // linea deja el requestId junto a la causa. Tomcat responde 500, aunque aqui el estado aun no lo refleje.
             log.error("{} {} -> error no controlado: {}", request.getMethod(), request.getRequestURI(), e.toString());
             throw e;
         } finally {
             long duracionMs = (System.nanoTime() - inicio) / 1_000_000;
-            int estado = fallo ? 500 : response.getStatus();
+            // Si no termino con normalidad (excepcion o Error, p. ej. OutOfMemoryError) Tomcat responde 500.
+            int estado = completado ? response.getStatus() : 500;
             log.info("{} {} -> {} ({} ms)", request.getMethod(), request.getRequestURI(), estado, duracionMs);
             MDC.remove(MDC_KEY);
         }

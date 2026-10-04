@@ -16,7 +16,7 @@ headers {
 
 assert {
   res.status: eq 200
-  res.body.estado: eq CREADO
+  res.body.id: isString
 }
 
 script:pre-request {
@@ -28,6 +28,7 @@ script:pre-request {
 
 docs {
   Consulta el primer pedido devuelto por "01 - Listar Mis Pedidos" (variable
-  `pedidoId`). Si el usuario no tiene pedidos, se omite: para crear uno corre
+  `pedidoId`) y comprueba que devuelve un pedido con id (no se exige un estado
+  concreto, porque cambiara cuando existan pagos). Si el usuario no tiene pedidos, se omite: para crear uno corre
   "13 - Iniciar Checkout" de la coleccion Carrito.
 }

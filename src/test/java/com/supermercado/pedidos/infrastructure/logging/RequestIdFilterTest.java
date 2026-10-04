@@ -131,4 +131,19 @@ class RequestIdFilterTest {
         assertThat(logs.list.get(1).getFormattedMessage()).startsWith("GET /api/x -> 500 (");
         assertThat(MDC.get(RequestIdFilter.MDC_KEY)).isNull();
     }
+
+    @Test
+    void deberiaReportarEstado500_YPropagarElError_CuandoElFiltroSiguienteLanzaUnError() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/x");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        StackOverflowError error = new StackOverflowError("simulado");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> filtro.doFilter(request, response, (req, res) -> {
+            throw error;
+        })).isSameAs(error);
+
+        assertThat(logs.list).hasSize(1);
+        assertThat(logs.list.get(0).getFormattedMessage()).startsWith("GET /api/x -> 500 (");
+        assertThat(MDC.get(RequestIdFilter.MDC_KEY)).isNull();
+    }
 }
