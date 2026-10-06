@@ -62,7 +62,7 @@ logging:
     com.supermercado: INFO
     # Este handler escribe ~90 lineas de stack trace por cada mensaje rechazado; el listener ya registra
     # una linea concisa con el eventId, y los fallos tras los reintentos los registra RejectAndDontRequeueRecoverer.
-    org.springframework.amqp.rabbit.listener.ConditionalRejectingErrorHandler: ERROR
+    org.springframework.amqp.listener.ConditionalRejectingErrorHandler: ERROR
   pattern:
     # Agrega [requestId|correlationId] y reemplaza saltos de linea en el mensaje:
     # evita que un valor controlado por un cliente falsifique lineas de log.
