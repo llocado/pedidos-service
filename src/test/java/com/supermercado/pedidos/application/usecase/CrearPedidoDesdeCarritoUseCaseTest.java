@@ -2,6 +2,7 @@ package com.supermercado.pedidos.application.usecase;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -24,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class CrearPedidoDesdeCarritoUseCaseTest {
 
     private static final UUID EVENT_ID = UUID.randomUUID();
+    private static final UUID CORRELATION_ID = UUID.randomUUID();
     private static final UUID CARRITO_ID = UUID.randomUUID();
     private static final String USUARIO_ID = "usuario-123";
 
@@ -52,10 +54,10 @@ class CrearPedidoDesdeCarritoUseCaseTest {
         List<ItemCarritoComando> items = List.of(
                 new ItemCarritoComando(UUID.randomUUID(), "Manzana Fuji", new BigDecimal("1500"), "CLP", 2));
 
-        crearPedidoDesdeCarritoUseCase.execute(EVENT_ID, CARRITO_ID, USUARIO_ID, items);
+        crearPedidoDesdeCarritoUseCase.execute(EVENT_ID, CORRELATION_ID, CARRITO_ID, USUARIO_ID, items);
 
         verify(pedidoRepositoryPort).guardar(any(Pedido.class));
-        verify(pedidoEventPublisherPort).publicarPedidoCreado(any(Pedido.class));
+        verify(pedidoEventPublisherPort).publicarPedidoCreado(any(Pedido.class), eq(CORRELATION_ID));
         verify(eventoProcesadoPort).marcarComoProcesado(EVENT_ID);
     }
 
@@ -66,10 +68,10 @@ class CrearPedidoDesdeCarritoUseCaseTest {
         List<ItemCarritoComando> items = List.of(
                 new ItemCarritoComando(UUID.randomUUID(), "Manzana Fuji", new BigDecimal("1500"), "CLP", 2));
 
-        crearPedidoDesdeCarritoUseCase.execute(EVENT_ID, CARRITO_ID, USUARIO_ID, items);
+        crearPedidoDesdeCarritoUseCase.execute(EVENT_ID, CORRELATION_ID, CARRITO_ID, USUARIO_ID, items);
 
         verify(pedidoRepositoryPort, never()).guardar(any(Pedido.class));
-        verify(pedidoEventPublisherPort, never()).publicarPedidoCreado(any(Pedido.class));
+        verify(pedidoEventPublisherPort, never()).publicarPedidoCreado(any(Pedido.class), any());
         verify(eventoProcesadoPort, never()).marcarComoProcesado(any());
     }
 
@@ -82,7 +84,7 @@ class CrearPedidoDesdeCarritoUseCaseTest {
                 new ItemCarritoComando(UUID.randomUUID(), "Manzana Fuji", new BigDecimal("1500"), "CLP", 2),
                 new ItemCarritoComando(UUID.randomUUID(), "Pan", new BigDecimal("2000"), "CLP", 1));
 
-        crearPedidoDesdeCarritoUseCase.execute(EVENT_ID, CARRITO_ID, USUARIO_ID, items);
+        crearPedidoDesdeCarritoUseCase.execute(EVENT_ID, CORRELATION_ID, CARRITO_ID, USUARIO_ID, items);
 
         var captor = org.mockito.ArgumentCaptor.forClass(Pedido.class);
         verify(pedidoRepositoryPort).guardar(captor.capture());

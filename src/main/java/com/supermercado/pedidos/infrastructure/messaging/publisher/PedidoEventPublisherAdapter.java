@@ -26,7 +26,7 @@ public class PedidoEventPublisherAdapter implements PedidoEventPublisherPort {
     private final ObjectMapper objectMapper;
 
     @Override
-    public void publicarPedidoCreado(Pedido pedido) {
+    public void publicarPedidoCreado(Pedido pedido, UUID correlationId) {
         PedidoCreadoPayload payload = new PedidoCreadoPayload(
                 pedido.getId().getValor(),
                 pedido.getCarritoIdOrigen(),
@@ -41,7 +41,7 @@ public class PedidoEventPublisherAdapter implements PedidoEventPublisherPort {
                 1,
                 Instant.now(),
                 PRODUCER,
-                null,
+                correlationId,
                 objectMapper.valueToTree(payload)
         );
 

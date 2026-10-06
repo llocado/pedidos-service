@@ -21,9 +21,15 @@ proyecto (decisiones de arquitectura, mapa de servicios, contrato de eventos).
   queda en `CREADO` (decisión ya cerrada en el ROADMAP: alcanza con "pedido
   pendiente" para el alcance de este proyecto).
 - **Idempotencia genérica por `eventId`.** Tabla `eventos_procesados`
-  (`EventoProcesadoPort`), pensada para reutilizarse en cualquier listener
-  futuro del servicio (ej. `pago.aprobado`/`pago.rechazado`), no solo en el
-  de checkout.
+  (`EventoProcesadoPort`), compartida por todos los listeners del servicio
+  (checkout, `pago.aprobado` y `pago.rechazado`).
+- **Los pagos cambian el pedido.** `pago.aprobado` lo pasa de CREADO a PAGADO
+  (`MarcarPedidoPagadoUseCase`) tras comprobar que usuario y monto coinciden
+  con los del pedido (si no, DLQ sin reintentos). Si el pedido todavía no es
+  visible (`pedido.creado` se publica antes del commit), el evento se
+  **reintenta** en vez de ir a la DLQ. `pago.rechazado` solo se registra.
+- **`correlationId` de punta a punta.** El `correlationId` del checkout se
+  propaga a `pedido.creado`, así se sigue el flujo entre servicios en los logs.
 - **Primer servicio del proyecto en tocar RabbitMQ de verdad.** Declara
   (de forma defensiva e idempotente) el exchange `carrito.events`, que en
   rigor es propiedad de `carrito-service` (que también lo declara, con las

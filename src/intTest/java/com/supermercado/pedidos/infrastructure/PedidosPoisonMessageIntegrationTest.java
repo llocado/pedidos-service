@@ -105,7 +105,7 @@ class PedidosPoisonMessageIntegrationTest {
         Message enDlq = rabbitTemplate.receive(DLQ, 10_000);
         assertThat(enDlq).as("mensaje en la DLQ").isNotNull();
         assertThat(new String(enDlq.getBody(), StandardCharsets.UTF_8)).contains(eventId.toString());
-        verify(crearPedidoDesdeCarritoUseCase, never()).execute(any(), any(), any(), any());
+        verify(crearPedidoDesdeCarritoUseCase, never()).execute(any(), any(), any(), any(), any());
         assertThat(pedidoRepositoryPort.buscarPorUsuarioId(usuarioId)).isEmpty();
         assertThat(logs.list).filteredOn(e -> e.getFormattedMessage().contains("Evento descartado a la DLQ"))
                 .as("se descarta una sola vez, sin reintentos")
@@ -124,15 +124,15 @@ class PedidosPoisonMessageIntegrationTest {
     @Test
     void falloTransitorioPersistente_DeberiaHacer1IntentoY3ReintentosYLuegoIrALaDlq() throws Exception {
         doThrow(new IllegalStateException("fallo transitorio simulado"))
-                .when(crearPedidoDesdeCarritoUseCase).execute(any(), any(), any(), any());
+                .when(crearPedidoDesdeCarritoUseCase).execute(any(), any(), any(), any(), any());
 
         publicar(envelopeJson(UUID.randomUUID(), payloadValido("usuario-transitorio-" + UUID.randomUUID())));
 
         assertThat(rabbitTemplate.receive(DLQ, 10_000)).as("mensaje en la DLQ tras agotar reintentos").isNotNull();
-        verify(crearPedidoDesdeCarritoUseCase, times(4)).execute(any(), any(), any(), any());
+        verify(crearPedidoDesdeCarritoUseCase, times(4)).execute(any(), any(), any(), any(), any());
 
         Thread.sleep(1500);
-        verify(crearPedidoDesdeCarritoUseCase, times(4)).execute(any(), any(), any(), any());
+        verify(crearPedidoDesdeCarritoUseCase, times(4)).execute(any(), any(), any(), any(), any());
         assertThat(rabbitAdmin.getQueueInfo(RabbitMQConfig.QUEUE_CHECKOUT_INICIADO).getMessageCount()).isZero();
     }
 

@@ -28,8 +28,12 @@ Diseño completo del proyecto: `../app-productos/docs/ROADMAP.md`.
 - Sin estado terminal de rechazo: si el pago falla, el pedido queda en
   `CREADO` (alcanza con "pendiente" para el alcance del proyecto).
 - Idempotencia genérica por `eventId` vía tabla `eventos_procesados`
-  (`EventoProcesadoPort`), pensada para reutilizarse en listeners futuros
-  (ej. `pago.aprobado`/`pago.rechazado`).
+  (`EventoProcesadoPort`), compartida por los tres listeners (checkout,
+  `pago.aprobado`, `pago.rechazado`).
+- `pago.aprobado` pasa el pedido a PAGADO (`MarcarPedidoPagadoUseCase`) tras
+  validar usuario y monto; pedido inexistente => se REINTENTA (carrera con la
+  publicación previa al commit de `pedido.creado`), datos incoherentes => DLQ.
+  `pago.rechazado` solo se registra. El `correlationId` del checkout se propaga.
 - Declara de forma defensiva e idempotente el exchange `carrito.events`,
   que en rigor es propiedad de `carrito-service` (que también lo declara) —
   así la cola se puede bindear aunque ese servicio no haya arrancado.

@@ -8,6 +8,7 @@ import com.supermercado.pedidos.infrastructure.messaging.dto.CarritoCheckoutInic
 import com.supermercado.pedidos.infrastructure.messaging.dto.CarritoCheckoutIniciadoPayload.ItemEventoDto;
 import com.supermercado.pedidos.infrastructure.messaging.dto.EventEnvelope;
 import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -45,8 +46,8 @@ public class CarritoEventListener {
             throw new AmqpRejectAndDontRequeueException("Envelope invalido: falta eventId o payload");
         }
 
-        String correlacion = String.valueOf(envelope.correlationId() != null ? envelope.correlationId() : envelope.eventId());
-        try (MDC.MDCCloseable ignored = MDC.putCloseable("correlationId", correlacion)) {
+        UUID correlacion = envelope.correlationId() != null ? envelope.correlationId() : envelope.eventId();
+        try (MDC.MDCCloseable ignored = MDC.putCloseable("correlationId", correlacion.toString())) {
             log.info("Evento recibido eventType={} eventId={}", envelope.eventType(), envelope.eventId());
 
             CarritoCheckoutIniciadoPayload payload = leerPayload(envelope);
@@ -62,7 +63,7 @@ public class CarritoEventListener {
                     .toList();
 
             try {
-                crearPedidoDesdeCarritoUseCase.execute(envelope.eventId(), payload.carritoId(), payload.usuarioId(), items);
+                crearPedidoDesdeCarritoUseCase.execute(envelope.eventId(), correlacion, payload.carritoId(), payload.usuarioId(), items);
             } catch (IllegalArgumentException | PedidoSinItemsException e) {
                 log.warn("Evento descartado a la DLQ eventId={}: regla de dominio violada ({})", envelope.eventId(), e.getMessage());
                 throw new AmqpRejectAndDontRequeueException("Regla de dominio violada: " + e.getMessage(), e);

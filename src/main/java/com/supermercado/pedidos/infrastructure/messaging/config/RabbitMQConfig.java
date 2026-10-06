@@ -31,11 +31,18 @@ public class RabbitMQConfig {
 
     public static final String EXCHANGE_CARRITO_EVENTS = "carrito.events";
     public static final String EXCHANGE_PEDIDOS_EVENTS = "pedidos.events";
+    public static final String EXCHANGE_PAGOS_EVENTS = "pagos.events";
 
     public static final String ROUTING_KEY_CHECKOUT_INICIADO = "carrito.checkout-iniciado";
     public static final String ROUTING_KEY_PEDIDO_CREADO = "pedido.creado";
+    public static final String ROUTING_KEY_PAGO_APROBADO = "pago.aprobado";
+    public static final String ROUTING_KEY_PAGO_RECHAZADO = "pago.rechazado";
 
     public static final String QUEUE_CHECKOUT_INICIADO = "pedidos.carrito-checkout-iniciado";
+    public static final String QUEUE_PAGO_APROBADO = "pedidos.pago-aprobado";
+    public static final String QUEUE_PAGO_RECHAZADO = "pedidos.pago-rechazado";
+    private static final String DLQ_PAGO_APROBADO = "pedidos.pago-aprobado.dlq";
+    private static final String DLQ_PAGO_RECHAZADO = "pedidos.pago-rechazado.dlq";
     private static final String DLX_PEDIDOS = "pedidos.dlx";
     private static final String DLQ_CHECKOUT_INICIADO = "pedidos.carrito-checkout-iniciado.dlq";
 
@@ -84,6 +91,58 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(checkoutIniciadoQueue())
                 .to(carritoEventsExchange())
                 .with(ROUTING_KEY_CHECKOUT_INICIADO);
+    }
+
+    /** pagos.events es de pagos-service; se declara igual aqui (mismas propiedades) para poder enlazar las colas. */
+    @Bean
+    public TopicExchange pagosEventsExchange() {
+        return new TopicExchange(EXCHANGE_PAGOS_EVENTS);
+    }
+
+    @Bean
+    public Queue pagoAprobadoDeadLetterQueue() {
+        return QueueBuilder.durable(DLQ_PAGO_APROBADO).build();
+    }
+
+    @Bean
+    public Binding pagoAprobadoDeadLetterBinding() {
+        return BindingBuilder.bind(pagoAprobadoDeadLetterQueue()).to(pedidosDeadLetterExchange()).with(DLQ_PAGO_APROBADO);
+    }
+
+    @Bean
+    public Queue pagoAprobadoQueue() {
+        return QueueBuilder.durable(QUEUE_PAGO_APROBADO)
+                .withArgument("x-dead-letter-exchange", DLX_PEDIDOS)
+                .withArgument("x-dead-letter-routing-key", DLQ_PAGO_APROBADO)
+                .build();
+    }
+
+    @Bean
+    public Binding pagoAprobadoBinding() {
+        return BindingBuilder.bind(pagoAprobadoQueue()).to(pagosEventsExchange()).with(ROUTING_KEY_PAGO_APROBADO);
+    }
+
+    @Bean
+    public Queue pagoRechazadoDeadLetterQueue() {
+        return QueueBuilder.durable(DLQ_PAGO_RECHAZADO).build();
+    }
+
+    @Bean
+    public Binding pagoRechazadoDeadLetterBinding() {
+        return BindingBuilder.bind(pagoRechazadoDeadLetterQueue()).to(pedidosDeadLetterExchange()).with(DLQ_PAGO_RECHAZADO);
+    }
+
+    @Bean
+    public Queue pagoRechazadoQueue() {
+        return QueueBuilder.durable(QUEUE_PAGO_RECHAZADO)
+                .withArgument("x-dead-letter-exchange", DLX_PEDIDOS)
+                .withArgument("x-dead-letter-routing-key", DLQ_PAGO_RECHAZADO)
+                .build();
+    }
+
+    @Bean
+    public Binding pagoRechazadoBinding() {
+        return BindingBuilder.bind(pagoRechazadoQueue()).to(pagosEventsExchange()).with(ROUTING_KEY_PAGO_RECHAZADO);
     }
 
     /**

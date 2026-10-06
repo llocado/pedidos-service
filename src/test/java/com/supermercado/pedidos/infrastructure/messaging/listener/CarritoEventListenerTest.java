@@ -44,7 +44,7 @@ class CarritoEventListenerTest {
     void deberiaDelegarEnElCasoDeUso_CuandoElPayloadEsValido() {
         listener.escucharCheckoutIniciado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + ITEM_VALIDO + "]")));
 
-        verify(crearPedido).execute(any(), any(), any(), any());
+        verify(crearPedido).execute(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -92,12 +92,12 @@ class CarritoEventListenerTest {
 
         assertThatThrownBy(() -> listener.escucharCheckoutIniciado(sinId))
                 .isInstanceOf(AmqpRejectAndDontRequeueException.class);
-        verify(crearPedido, never()).execute(any(), any(), any(), any());
+        verify(crearPedido, never()).execute(any(), any(), any(), any(), any());
     }
 
     @Test
     void deberiaRechazarSinReencolar_CuandoElCasoDeUsoViolaUnaReglaDeDominio() {
-        doThrow(new PedidoSinItemsException("sin items")).when(crearPedido).execute(any(), any(), any(), any());
+        doThrow(new PedidoSinItemsException("sin items")).when(crearPedido).execute(any(), any(), any(), any(), any());
 
         assertThatThrownBy(() -> listener.escucharCheckoutIniciado(
                 envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + ITEM_VALIDO + "]"))))
@@ -107,7 +107,7 @@ class CarritoEventListenerTest {
     @Test
     void deberiaPropagarElErrorTalCual_CuandoElFalloEsTransitorio_ParaQueSpringReintente() {
         IllegalStateException transitorio = new IllegalStateException("base de datos no disponible");
-        doThrow(transitorio).when(crearPedido).execute(any(), any(), any(), any());
+        doThrow(transitorio).when(crearPedido).execute(any(), any(), any(), any(), any());
 
         assertThatThrownBy(() -> listener.escucharCheckoutIniciado(
                 envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + ITEM_VALIDO + "]"))))
@@ -124,7 +124,7 @@ class CarritoEventListenerTest {
     private void assertRechazado(EventEnvelope envelope) {
         assertThatThrownBy(() -> listener.escucharCheckoutIniciado(envelope))
                 .isInstanceOf(AmqpRejectAndDontRequeueException.class);
-        verify(crearPedido, never()).execute(any(), any(), any(), any());
+        verify(crearPedido, never()).execute(any(), any(), any(), any(), any());
     }
 
     private tools.jackson.databind.JsonNode payload(String carritoId, String usuarioId, String items) {

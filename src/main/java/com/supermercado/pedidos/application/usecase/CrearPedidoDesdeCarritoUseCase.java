@@ -28,7 +28,7 @@ public class CrearPedidoDesdeCarritoUseCase {
      * ack perdido, entrega at-least-once), no crea un segundo pedido.
      */
     @Transactional
-    public void execute(UUID eventId, UUID carritoId, String usuarioId, List<ItemCarritoComando> items) {
+    public void execute(UUID eventId, UUID correlationId, UUID carritoId, String usuarioId, List<ItemCarritoComando> items) {
         if (eventoProcesadoPort.yaFueProcesado(eventId)) {
             log.info("Evento ya procesado, se descarta el duplicado eventId={}", eventId);
             return;
@@ -41,7 +41,7 @@ public class CrearPedidoDesdeCarritoUseCase {
         Pedido pedido = Pedido.crearDesdeCarrito(carritoId, usuarioId, itemsPedido);
         pedido = pedidoRepositoryPort.guardar(pedido);
 
-        pedidoEventPublisherPort.publicarPedidoCreado(pedido);
+        pedidoEventPublisherPort.publicarPedidoCreado(pedido, correlationId);
         eventoProcesadoPort.marcarComoProcesado(eventId);
         log.info("Pedido creado pedidoId={} carritoId={} usuarioId={} items={} total={}",
                 pedido.getId().getValor(), carritoId, usuarioId, itemsPedido.size(), pedido.getTotal());
