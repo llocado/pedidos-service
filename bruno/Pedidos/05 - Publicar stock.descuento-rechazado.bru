@@ -1,0 +1,67 @@
+meta {
+  name: 05 - Publicar stock.descuento-rechazado
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{rabbitmqManagementUrl}}/api/exchanges/%2F/productos.events/publish
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: supermercado
+  password: supermercado
+}
+
+body:json {
+  {}
+}
+
+assert {
+  res.status: eq 200
+  res.body.routed: eq true
+}
+
+script:pre-request {
+  // Sin pedido no hay nada que marcar: se omite en vez de fallar.
+  if (!bru.getVar("pedidoId")) {
+    bru.runner.skipRequest();
+    return;
+  }
+  const { v4: uuid } = require("uuid");
+  const sub = JSON.parse(atob(bru.getVar("token").split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).sub;
+  const envelope = {
+    eventId: uuid(),
+    eventType: "stock.descuento-rechazado",
+    eventVersion: 1,
+    occurredAt: new Date().toISOString(),
+    producer: "bruno",
+    correlationId: uuid(),
+    payload: {
+      pagoId: uuid(),
+      pedidoId: bru.getVar("pedidoId"),
+      usuarioId: sub,
+      faltantes: [{ productoId: uuid(), solicitado: 5, disponible: 2 }]
+    }
+  };
+  req.setBody({
+    properties: { content_type: "application/json" },
+    routing_key: "stock.descuento-rechazado",
+    payload: JSON.stringify(envelope),
+    payload_encoding: "string"
+  });
+}
+
+docs {
+  Simula lo que app-productos publica cuando un pago aprobado no pudo descontar el stock: pasa el pedido de
+  `pedidoId` (el primero de "01 - Listar Mis Pedidos") de PAGADO a SIN_STOCK. Se publica por la API HTTP de RabbitMQ
+  ({{rabbitmqManagementUrl}}); `routed: true` confirma que la cola `pedidos.stock-descuento-rechazado` lo recibio.
+  El efecto es asincrono: mira "06 - Verificar pedido sin stock".
+
+  Requisito: el pedido debe estar PAGADO (corre antes el flujo real "13 - Iniciar Checkout" de la coleccion Carrito).
+  Si esta en CREADO, el evento se reintenta 1 + 3 veces y termina en `pedidos.stock-descuento-rechazado.dlq`; si es de
+  otro usuario, va directo a la DLQ. Ojo: SIN_STOCK es un estado final, el pedido queda asi. Limpieza:
+  `supermercado-infra/scripts/reset-datos-dev.sh --servicio pedidos`.
+}

@@ -28,6 +28,9 @@ proyecto (decisiones de arquitectura, mapa de servicios, contrato de eventos).
   con los del pedido (si no, DLQ sin reintentos). Si el pedido todavía no es
   visible (`pedido.creado` se publica antes del commit), el evento se
   **reintenta** en vez de ir a la DLQ. `pago.rechazado` solo se registra.
+- **Sin stock.** Si al descontar el stock de un pago aprobado algún producto no alcanza, `app-productos` publica
+  `stock.descuento-rechazado` y el pedido pasa de PAGADO a `SIN_STOCK` (estado final, gestión manual). Si el evento
+  se adelanta al `pago.aprobado` (el pedido sigue en CREADO), se reintenta.
 - **`correlationId` de punta a punta.** El `correlationId` del checkout se
   propaga a `pedido.creado`, así se sigue el flujo entre servicios en los logs.
 - **Primer servicio del proyecto en tocar RabbitMQ de verdad.** Declara

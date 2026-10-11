@@ -50,6 +50,6 @@ public class PedidoEntity {
     private final List<ItemPedidoEntity> items = new ArrayList<>();
 
     public enum EstadoPedidoJpa {
-        CREADO, PAGADO, DESPACHADO, ENTREGADO
+        CREADO, PAGADO, DESPACHADO, ENTREGADO, SIN_STOCK
     }
 }

@@ -1,0 +1,34 @@
+meta {
+  name: 06 - Verificar pedido sin stock
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/pedidos/{{pedidoId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.estado: eq SIN_STOCK
+}
+
+script:pre-request {
+  if (!bru.getVar("pedidoId")) {
+    bru.runner.skipRequest();
+    return;
+  }
+  // El cambio de estado lo hace un listener de forma asincrona: se espera un instante antes de consultar.
+  await bru.sleep(2000);
+}
+
+docs {
+  Despues de "05 - Publicar stock.descuento-rechazado" el pedido debe aparecer como SIN_STOCK. Si sigue PAGADO, el
+  listener no proceso el evento (revisa la cola `pedidos.stock-descuento-rechazado` y su DLQ en la UI de RabbitMQ).
+}

@@ -32,15 +32,19 @@ public class RabbitMQConfig {
     public static final String EXCHANGE_CARRITO_EVENTS = "carrito.events";
     public static final String EXCHANGE_PEDIDOS_EVENTS = "pedidos.events";
     public static final String EXCHANGE_PAGOS_EVENTS = "pagos.events";
+    public static final String EXCHANGE_PRODUCTOS_EVENTS = "productos.events";
 
     public static final String ROUTING_KEY_CHECKOUT_INICIADO = "carrito.checkout-iniciado";
     public static final String ROUTING_KEY_PEDIDO_CREADO = "pedido.creado";
     public static final String ROUTING_KEY_PAGO_APROBADO = "pago.aprobado";
     public static final String ROUTING_KEY_PAGO_RECHAZADO = "pago.rechazado";
+    public static final String ROUTING_KEY_STOCK_DESCUENTO_RECHAZADO = "stock.descuento-rechazado";
 
     public static final String QUEUE_CHECKOUT_INICIADO = "pedidos.carrito-checkout-iniciado";
     public static final String QUEUE_PAGO_APROBADO = "pedidos.pago-aprobado";
     public static final String QUEUE_PAGO_RECHAZADO = "pedidos.pago-rechazado";
+    public static final String QUEUE_STOCK_DESCUENTO_RECHAZADO = "pedidos.stock-descuento-rechazado";
+    private static final String DLQ_STOCK_DESCUENTO_RECHAZADO = "pedidos.stock-descuento-rechazado.dlq";
     private static final String DLQ_PAGO_APROBADO = "pedidos.pago-aprobado.dlq";
     private static final String DLQ_PAGO_RECHAZADO = "pedidos.pago-rechazado.dlq";
     private static final String DLX_PEDIDOS = "pedidos.dlx";
@@ -143,6 +147,37 @@ public class RabbitMQConfig {
     @Bean
     public Binding pagoRechazadoBinding() {
         return BindingBuilder.bind(pagoRechazadoQueue()).to(pagosEventsExchange()).with(ROUTING_KEY_PAGO_RECHAZADO);
+    }
+
+    /** productos.events es de app-productos; se declara igual aqui (mismas propiedades) para poder enlazar la cola. */
+    @Bean
+    public TopicExchange productosEventsExchange() {
+        return new TopicExchange(EXCHANGE_PRODUCTOS_EVENTS);
+    }
+
+    @Bean
+    public Queue stockDescuentoRechazadoDeadLetterQueue() {
+        return QueueBuilder.durable(DLQ_STOCK_DESCUENTO_RECHAZADO).build();
+    }
+
+    @Bean
+    public Binding stockDescuentoRechazadoDeadLetterBinding() {
+        return BindingBuilder.bind(stockDescuentoRechazadoDeadLetterQueue()).to(pedidosDeadLetterExchange())
+                .with(DLQ_STOCK_DESCUENTO_RECHAZADO);
+    }
+
+    @Bean
+    public Queue stockDescuentoRechazadoQueue() {
+        return QueueBuilder.durable(QUEUE_STOCK_DESCUENTO_RECHAZADO)
+                .withArgument("x-dead-letter-exchange", DLX_PEDIDOS)
+                .withArgument("x-dead-letter-routing-key", DLQ_STOCK_DESCUENTO_RECHAZADO)
+                .build();
+    }
+
+    @Bean
+    public Binding stockDescuentoRechazadoBinding() {
+        return BindingBuilder.bind(stockDescuentoRechazadoQueue()).to(productosEventsExchange())
+                .with(ROUTING_KEY_STOCK_DESCUENTO_RECHAZADO);
     }
 
     /**

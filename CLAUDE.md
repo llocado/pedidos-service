@@ -34,6 +34,11 @@ Diseño completo del proyecto: `../app-productos/docs/ROADMAP.md`.
   validar usuario y monto; pedido inexistente => se REINTENTA (carrera con la
   publicación previa al commit de `pedido.creado`), datos incoherentes => DLQ.
   `pago.rechazado` solo se registra. El `correlationId` del checkout se propaga.
+- `stock.descuento-rechazado` (de `app-productos`, cuando un pago aprobado no pudo descontar el stock) pasa el pedido de
+  PAGADO a **`SIN_STOCK`** (`MarcarPedidoSinStockUseCase`), estado terminal para gestión manual. `SIN_STOCK` es una
+  rama lateral: solo se llega desde PAGADO y no se sale (`EstadoPedido.puedeTransicionarA` lo trata aparte, porque no
+  está en el orden lineal). Como `pago.aprobado` llega en paralelo a pedidos y a productos, el evento puede adelantarse:
+  un pedido todavía en CREADO lanza `PedidoAunNoPagadoException` y se REINTENTA (1 + 3); usuario distinto => DLQ.
 - Declara de forma defensiva e idempotente el exchange `carrito.events`,
   que en rigor es propiedad de `carrito-service` (que también lo declara) —
   así la cola se puede bindear aunque ese servicio no haya arrancado.

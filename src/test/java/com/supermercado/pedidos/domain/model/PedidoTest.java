@@ -60,6 +60,62 @@ class PedidoTest {
                 .isInstanceOf(TransicionEstadoInvalidaException.class);
     }
 
+    @Test
+    void transicionarA_DeberiaPasarASinStock_SoloDesdePagado() {
+        Pedido pedido = pedidoConUnItem();
+        pedido.transicionarA(EstadoPedido.PAGADO);
+
+        pedido.transicionarA(EstadoPedido.SIN_STOCK);
+
+        assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.SIN_STOCK);
+    }
+
+    @Test
+    void transicionarA_NoDeberiaPasarASinStock_DesdeCreadoDespachadoOEntregado() {
+        for (EstadoPedido desde : new EstadoPedido[] {EstadoPedido.CREADO, EstadoPedido.DESPACHADO, EstadoPedido.ENTREGADO}) {
+            Pedido pedido = pedidoEn(desde);
+
+            assertThatThrownBy(() -> pedido.transicionarA(EstadoPedido.SIN_STOCK))
+                    .as("desde %s", desde)
+                    .isInstanceOf(TransicionEstadoInvalidaException.class);
+        }
+    }
+
+    @Test
+    void transicionarA_NoDeberiaSalirDeSinStock_HaciaNingunEstado() {
+        Pedido pedido = pedidoEn(EstadoPedido.SIN_STOCK);
+
+        // Sin la regla explicita, indexOf(SIN_STOCK) = -1 dejaria "avanzar" a CREADO (posicion 0).
+        for (EstadoPedido destino : EstadoPedido.values()) {
+            assertThatThrownBy(() -> pedido.transicionarA(destino))
+                    .as("SIN_STOCK -> %s", destino)
+                    .isInstanceOf(TransicionEstadoInvalidaException.class);
+        }
+        assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.SIN_STOCK);
+    }
+
+    private static Pedido pedidoEn(EstadoPedido estado) {
+        Pedido pedido = pedidoConUnItem();
+        switch (estado) {
+            case CREADO -> { }
+            case PAGADO -> pedido.transicionarA(EstadoPedido.PAGADO);
+            case DESPACHADO -> {
+                pedido.transicionarA(EstadoPedido.PAGADO);
+                pedido.transicionarA(EstadoPedido.DESPACHADO);
+            }
+            case ENTREGADO -> {
+                pedido.transicionarA(EstadoPedido.PAGADO);
+                pedido.transicionarA(EstadoPedido.DESPACHADO);
+                pedido.transicionarA(EstadoPedido.ENTREGADO);
+            }
+            case SIN_STOCK -> {
+                pedido.transicionarA(EstadoPedido.PAGADO);
+                pedido.transicionarA(EstadoPedido.SIN_STOCK);
+            }
+        }
+        return pedido;
+    }
+
     private static Pedido pedidoConUnItem() {
         ItemPedido item = ItemPedido.de(UUID.randomUUID(), "Manzana Fuji", new BigDecimal("1500"), "CLP", 2);
         return Pedido.crearDesdeCarrito(CARRITO_ID, USUARIO_ID, List.of(item));
