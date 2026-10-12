@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-agregar-version-a-pedidos
+      author: supermercado
+      changes:
+        # Bloqueo optimista: pago.aprobado y stock.descuento-rechazado sobre el mismo pedido ya no se pisan en
+        # silencio; el segundo en confirmar falla y se reintenta.
+        - addColumn:
+            tableName: pedidos
+            columns:
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false

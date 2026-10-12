@@ -8,6 +8,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -45,6 +46,14 @@ public class PedidoEntity {
 
     @Column(name = "actualizado_en", nullable = false)
     private Instant actualizadoEn;
+
+    /**
+     * Bloqueo optimista: pago.aprobado y stock.descuento-rechazado llegan en paralelo y ambos leen el estado, lo
+     * cambian y lo guardan. Sin version, el ultimo en escribir pisaba al otro en silencio (un pedido sin stock podia
+     * quedar PAGADO). El segundo en confirmar falla, se reintenta y ve el estado nuevo.
+     */
+    @Version
+    private Long version;
 
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
     private final List<ItemPedidoEntity> items = new ArrayList<>();
