@@ -22,8 +22,10 @@ public enum EstadoPedido {
 
     public boolean puedeTransicionarA(EstadoPedido siguiente) {
         // SIN_STOCK no esta en ORDEN (indexOf daria -1 y la regla de "avanzar un paso" permitiria SIN_STOCK -> CREADO).
+        // Desde CREADO tambien: stock.descuento-rechazado puede llegar antes que pago.aprobado (viajan en paralelo) y el
+        // rechazo solo existe porque el pago ya se aprobo.
         if (siguiente == SIN_STOCK) {
-            return this == PAGADO;
+            return this == CREADO || this == PAGADO;
         }
         if (this == SIN_STOCK) {
             return false;

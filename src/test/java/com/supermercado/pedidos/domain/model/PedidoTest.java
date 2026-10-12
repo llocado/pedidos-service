@@ -61,7 +61,7 @@ class PedidoTest {
     }
 
     @Test
-    void transicionarA_DeberiaPasarASinStock_SoloDesdePagado() {
+    void transicionarA_DeberiaPasarASinStock_DesdePagado() {
         Pedido pedido = pedidoConUnItem();
         pedido.transicionarA(EstadoPedido.PAGADO);
 
@@ -71,8 +71,17 @@ class PedidoTest {
     }
 
     @Test
-    void transicionarA_NoDeberiaPasarASinStock_DesdeCreadoDespachadoOEntregado() {
-        for (EstadoPedido desde : new EstadoPedido[] {EstadoPedido.CREADO, EstadoPedido.DESPACHADO, EstadoPedido.ENTREGADO}) {
+    void transicionarA_DeberiaPasarASinStock_DesdeCreado_PorqueElRechazoPuedeAdelantarseAlPago() {
+        Pedido pedido = pedidoConUnItem();
+
+        pedido.transicionarA(EstadoPedido.SIN_STOCK);
+
+        assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.SIN_STOCK);
+    }
+
+    @Test
+    void transicionarA_NoDeberiaPasarASinStock_DesdeDespachadoOEntregado() {
+        for (EstadoPedido desde : new EstadoPedido[] {EstadoPedido.DESPACHADO, EstadoPedido.ENTREGADO}) {
             Pedido pedido = pedidoEn(desde);
 
             assertThatThrownBy(() -> pedido.transicionarA(EstadoPedido.SIN_STOCK))

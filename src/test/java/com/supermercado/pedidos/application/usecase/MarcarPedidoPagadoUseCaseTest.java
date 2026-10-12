@@ -59,7 +59,7 @@ class MarcarPedidoPagadoUseCaseTest {
     void execute_DeberiaMarcarElPedidoComoPagado_YElEventoComoProcesado() {
         pedidoExiste();
 
-        useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID, new BigDecimal("3000"));
+        useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID, new BigDecimal("3000"), "CLP");
 
         assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.PAGADO);
         verify(pedidoRepositoryPort).guardar(pedido);
@@ -70,7 +70,7 @@ class MarcarPedidoPagadoUseCaseTest {
     void execute_DeberiaAceptarElMontoConOtraEscala_CuandoEsNumericamenteIgualAlTotal() {
         pedidoExiste();
 
-        useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID, new BigDecimal("3000.00"));
+        useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID, new BigDecimal("3000.00"), "CLP");
 
         assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.PAGADO);
     }
@@ -79,7 +79,7 @@ class MarcarPedidoPagadoUseCaseTest {
     void execute_NoDeberiaHacerNada_CuandoElEventoYaFueProcesado() {
         when(eventoProcesadoPort.yaFueProcesado(EVENT_ID)).thenReturn(true);
 
-        useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID, new BigDecimal("3000"));
+        useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID, new BigDecimal("3000"), "CLP");
 
         verify(pedidoRepositoryPort, never()).buscarPorId(any());
         verify(pedidoRepositoryPort, never()).guardar(any());
@@ -90,7 +90,7 @@ class MarcarPedidoPagadoUseCaseTest {
     void execute_DeberiaFallarSinMarcarNada_CuandoElPedidoNoExiste() {
         when(pedidoRepositoryPort.buscarPorId(any())).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> useCase.execute(EVENT_ID, UUID.randomUUID(), USUARIO_ID, new BigDecimal("3000")))
+        assertThatThrownBy(() -> useCase.execute(EVENT_ID, UUID.randomUUID(), USUARIO_ID, new BigDecimal("3000"), "CLP"))
                 .isInstanceOf(PedidoNoEncontradoException.class);
 
         verify(eventoProcesadoPort, never()).marcarComoProcesado(any());
@@ -100,7 +100,7 @@ class MarcarPedidoPagadoUseCaseTest {
     void execute_DeberiaRechazarElPago_CuandoElUsuarioNoEsElDelPedido() {
         pedidoExiste();
 
-        assertThatThrownBy(() -> useCase.execute(EVENT_ID, pedidoId(), "otro-usuario", new BigDecimal("3000")))
+        assertThatThrownBy(() -> useCase.execute(EVENT_ID, pedidoId(), "otro-usuario", new BigDecimal("3000"), "CLP"))
                 .isInstanceOf(PagoInconsistenteException.class);
 
         assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.CREADO);
@@ -112,12 +112,36 @@ class MarcarPedidoPagadoUseCaseTest {
     void execute_DeberiaRechazarElPago_CuandoElMontoNoCoincideConElTotal() {
         pedidoExiste();
 
-        assertThatThrownBy(() -> useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID, new BigDecimal("3000.01")))
+        assertThatThrownBy(() -> useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID, new BigDecimal("3000.01"), "CLP"))
                 .isInstanceOf(PagoInconsistenteException.class);
-        assertThatThrownBy(() -> useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID, new BigDecimal("2999.99")))
+        assertThatThrownBy(() -> useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID, new BigDecimal("2999.99"), "CLP"))
                 .isInstanceOf(PagoInconsistenteException.class);
 
         assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.CREADO);
+    }
+
+    @Test
+    void execute_DeberiaRechazarElPago_CuandoLaMonedaNoCoincideConLaDelPedido() {
+        pedidoExiste();
+
+        assertThatThrownBy(() -> useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID, new BigDecimal("3000"), "USD"))
+                .isInstanceOf(PagoInconsistenteException.class);
+
+        assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.CREADO);
+        verify(pedidoRepositoryPort, never()).guardar(any());
+        verify(eventoProcesadoPort, never()).marcarComoProcesado(any());
+    }
+
+    @Test
+    void execute_DeberiaIgnorarElPagoTardioYMarcarloProcesado_CuandoElRechazoDeStockLlegoPrimero() {
+        pedido.transicionarA(EstadoPedido.SIN_STOCK);
+        pedidoExiste();
+
+        useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID, new BigDecimal("3000"), "CLP");
+
+        assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.SIN_STOCK);
+        verify(pedidoRepositoryPort, never()).guardar(any());
+        verify(eventoProcesadoPort).marcarComoProcesado(EVENT_ID);
     }
 
     @Test
@@ -125,7 +149,7 @@ class MarcarPedidoPagadoUseCaseTest {
         pedido.transicionarA(EstadoPedido.PAGADO);
         pedidoExiste();
 
-        useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID, new BigDecimal("3000"));
+        useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID, new BigDecimal("3000"), "CLP");
 
         verify(pedidoRepositoryPort, never()).guardar(any());
         verify(eventoProcesadoPort).marcarComoProcesado(EVENT_ID);
@@ -137,7 +161,7 @@ class MarcarPedidoPagadoUseCaseTest {
         pedido.transicionarA(EstadoPedido.DESPACHADO);
         pedidoExiste();
 
-        useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID, new BigDecimal("3000"));
+        useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID, new BigDecimal("3000"), "CLP");
 
         assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.DESPACHADO);
         verify(pedidoRepositoryPort, never()).guardar(any());

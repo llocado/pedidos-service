@@ -26,11 +26,11 @@ public class MarcarPedidoPagadoUseCase {
     /**
      * Idempotente por eventId. Un pedido inexistente lanza PedidoNoEncontradoException, que el listener deja
      * propagar para que se REINTENTE: pedido.creado se publica antes de que el pedido se confirme en la base,
-     * asi que pago.aprobado puede llegar un instante antes de que el pedido sea visible. El usuario o el monto
+     * asi que pago.aprobado puede llegar un instante antes de que el pedido sea visible. El usuario, el monto o la moneda
      * distintos a los del pedido son datos incoherentes (PagoInconsistenteException): no se reintentan.
      */
     @Transactional
-    public void execute(UUID eventId, UUID pedidoId, String usuarioId, BigDecimal monto) {
+    public void execute(UUID eventId, UUID pedidoId, String usuarioId, BigDecimal monto, String moneda) {
         if (eventoProcesadoPort.yaFueProcesado(eventId)) {
             log.info("Evento ya procesado, se descarta el duplicado eventId={}", eventId);
             return;
@@ -43,6 +43,9 @@ public class MarcarPedidoPagadoUseCase {
         }
         if (pedido.getTotal().compareTo(monto) != 0) {
             throw new PagoInconsistenteException("El monto del pago no coincide con el total del pedido " + pedidoId);
+        }
+        if (!pedido.getMoneda().equals(moneda)) {
+            throw new PagoInconsistenteException("La moneda del pago no coincide con la del pedido " + pedidoId);
         }
 
         if (pedido.getEstado() == EstadoPedido.CREADO) {

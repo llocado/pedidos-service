@@ -10,7 +10,7 @@ import static org.mockito.Mockito.verify;
 
 import com.supermercado.pedidos.application.usecase.MarcarPedidoSinStockUseCase;
 import com.supermercado.pedidos.domain.exception.PagoInconsistenteException;
-import com.supermercado.pedidos.domain.exception.PedidoAunNoPagadoException;
+import com.supermercado.pedidos.domain.exception.PedidoNoEncontradoException;
 import com.supermercado.pedidos.infrastructure.messaging.dto.EventEnvelope;
 import java.time.Instant;
 import java.util.UUID;
@@ -95,11 +95,11 @@ class StockEventListenerTest {
     }
 
     @Test
-    void deberiaPropagarSinEnvolver_ElPedidoAunNoPagadoParaQueSeReintente() {
-        doThrow(new PedidoAunNoPagadoException("aun CREADO")).when(marcarPedidoSinStock).execute(any(), any(), any());
+    void deberiaPropagarSinEnvolver_ElPedidoNoEncontradoParaQueSeReintente() {
+        doThrow(new PedidoNoEncontradoException("no visible")).when(marcarPedidoSinStock).execute(any(), any(), any());
 
         assertThatThrownBy(() -> listener.escucharStockDescuentoRechazado(envelope(payload("\"u1\"", "[" + FALTANTE + "]"))))
-                .isInstanceOf(PedidoAunNoPagadoException.class);
+                .isInstanceOf(PedidoNoEncontradoException.class);
     }
 
     private void assertRechazado(JsonNode payload) {

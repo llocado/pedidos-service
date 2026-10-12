@@ -90,6 +90,11 @@ public class Pedido {
         return items;
     }
 
+    /** Moneda del pedido: la de sus items (un pedido nunca se crea sin items). */
+    public String getMoneda() {
+        return items.get(0).getMoneda();
+    }
+
     public BigDecimal getTotal() {
         return total;
     }

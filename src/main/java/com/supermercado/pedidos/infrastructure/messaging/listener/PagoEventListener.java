@@ -45,7 +45,7 @@ public class PagoEventListener {
             PagoAprobadoPayload payload = leerPayload(envelope, PagoAprobadoPayload.class);
             rechazarSiEsInvalido(envelope, validarAprobado(payload));
             try {
-                marcarPedidoPagadoUseCase.execute(envelope.eventId(), payload.pedidoId(), payload.usuarioId(), payload.monto());
+                marcarPedidoPagadoUseCase.execute(envelope.eventId(), payload.pedidoId(), payload.usuarioId(), payload.monto(), payload.moneda());
             } catch (PagoInconsistenteException e) {
                 log.error("Evento descartado a la DLQ eventId={}: pago incoherente con el pedido ({})", envelope.eventId(), e.getMessage());
                 throw new AmqpRejectAndDontRequeueException("Pago incoherente con el pedido: " + e.getMessage(), e);

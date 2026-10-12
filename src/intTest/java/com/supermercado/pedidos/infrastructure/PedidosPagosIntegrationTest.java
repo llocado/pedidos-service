@@ -144,7 +144,7 @@ class PedidosPagosIntegrationTest {
 
         assertThat(rabbitTemplate.receive(DLQ_APROBADO, 10_000)).as("mensaje en la DLQ").isNotNull();
         assertThat(estadoDe(usuario)).isEqualTo(EstadoPedido.CREADO);
-        verify(marcarPedidoPagadoUseCase, times(1)).execute(any(), any(), any(), any());
+        verify(marcarPedidoPagadoUseCase, times(1)).execute(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -163,7 +163,7 @@ class PedidosPagosIntegrationTest {
         publicarPagoAprobado(UUID.randomUUID(), UUID.randomUUID(), "usuario-fantasma", "3000");
 
         assertThat(rabbitTemplate.receive(DLQ_APROBADO, 10_000)).as("mensaje en la DLQ tras agotar reintentos").isNotNull();
-        verify(marcarPedidoPagadoUseCase, times(4)).execute(any(), any(), any(), any());
+        verify(marcarPedidoPagadoUseCase, times(4)).execute(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -173,13 +173,13 @@ class PedidosPagosIntegrationTest {
         doThrow(new PedidoNoEncontradoException("todavia no visible"))
                 .doThrow(new PedidoNoEncontradoException("todavia no visible"))
                 .doCallRealMethod()
-                .when(marcarPedidoPagadoUseCase).execute(any(), any(), any(), any());
+                .when(marcarPedidoPagadoUseCase).execute(any(), any(), any(), any(), any());
 
         publicarPagoAprobado(UUID.randomUUID(), pedido.getId().getValor(), usuario, "3000");
 
         await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> assertThat(estadoDe(usuario)).isEqualTo(EstadoPedido.PAGADO));
         assertThat(rabbitAdmin.getQueueInfo(DLQ_APROBADO).getMessageCount()).as("no debe ir a la DLQ").isZero();
-        verify(marcarPedidoPagadoUseCase, times(3)).execute(any(), any(), any(), any());
+        verify(marcarPedidoPagadoUseCase, times(3)).execute(any(), any(), any(), any(), any());
     }
 
     private Pedido crearPedido(String usuario, String total) {

@@ -3,8 +3,8 @@ package com.supermercado.pedidos.infrastructure;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -13,8 +13,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.supermercado.pedidos.application.port.PedidoRepositoryPort;
+import com.supermercado.pedidos.application.usecase.MarcarPedidoPagadoUseCase;
 import com.supermercado.pedidos.application.usecase.MarcarPedidoSinStockUseCase;
-import com.supermercado.pedidos.domain.exception.PedidoAunNoPagadoException;
 import com.supermercado.pedidos.domain.model.EstadoPedido;
 import com.supermercado.pedidos.domain.model.Pedido;
 import com.supermercado.pedidos.infrastructure.messaging.config.RabbitMQConfig;
@@ -78,6 +78,9 @@ class PedidosStockIntegrationTest {
     @MockitoSpyBean
     private MarcarPedidoSinStockUseCase marcarPedidoSinStockUseCase;
 
+    @MockitoSpyBean
+    private MarcarPedidoPagadoUseCase marcarPedidoPagadoUseCase;
+
     @MockitoBean
     private JwtDecoder jwtDecoder;
 
@@ -117,32 +120,29 @@ class PedidosStockIntegrationTest {
     }
 
     @Test
-    void stockRechazadoQueLlegaAntesQueElPago_DeberiaRecuperarseConLosReintentos() {
+    void stockRechazadoQueLlegaAntesQueElPago_DeberiaPasarElPedidoASinStock_YElPagoTardioSeIgnora() {
         String usuario = usuarioUnico();
-        Pedido pedido = crearPedidoPagado(usuario);
-        // Las dos primeras veces el pedido "todavia esta en CREADO" (el pago.aprobado aun no se proceso).
-        doThrow(new PedidoAunNoPagadoException("aun CREADO"))
-                .doThrow(new PedidoAunNoPagadoException("aun CREADO"))
-                .doCallRealMethod()
-                .when(marcarPedidoSinStockUseCase).execute(any(), any(), any());
+        Pedido pedido = crearPedido(usuario); // CREADO: pago.aprobado todavia no llega (pedidos caido, backlog, etc.)
 
         publicarStockRechazado(UUID.randomUUID(), pedido.getId().getValor(), usuario);
-
         await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> assertThat(estadoDe(usuario)).isEqualTo(EstadoPedido.SIN_STOCK));
-        assertThat(rabbitAdmin.getQueueInfo(DLQ).getMessageCount()).as("no debe ir a la DLQ").isZero();
-        verify(marcarPedidoSinStockUseCase, times(3)).execute(any(), any(), any());
+
+        // El pago.aprobado llega despues, mucho mas tarde que cualquier reintento: se procesa y no cambia nada.
+        publicarPagoAprobado(pedido.getId().getValor(), usuario);
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() ->
+                verify(marcarPedidoPagadoUseCase).execute(any(), eq(pedido.getId().getValor()), eq(usuario), any(), any()));
+        assertThat(estadoDe(usuario)).isEqualTo(EstadoPedido.SIN_STOCK);
+        verify(marcarPedidoSinStockUseCase, times(1)).execute(any(), any(), any());
+        assertThat(rabbitAdmin.getQueueInfo(DLQ).getMessageCount()).as("sin DLQ").isZero();
+        assertThat(rabbitAdmin.getQueueInfo(RabbitMQConfig.QUEUE_PAGO_APROBADO + ".dlq").getMessageCount()).isZero();
     }
 
     @Test
-    void stockRechazadoDeUnPedidoQueNuncaSePaga_DeberiaReintentarse1Mas3VecesYLuegoIrALaDlq() {
-        String usuario = usuarioUnico();
-        Pedido pedido = crearPedido(usuario); // queda en CREADO: nadie publica pago.aprobado
-
-        publicarStockRechazado(UUID.randomUUID(), pedido.getId().getValor(), usuario);
+    void stockRechazadoDeUnPedidoInexistente_DeberiaReintentarse1Mas3VecesYLuegoIrALaDlq() {
+        publicarStockRechazado(UUID.randomUUID(), UUID.randomUUID(), usuarioUnico());
 
         assertThat(rabbitTemplate.receive(DLQ, 10_000)).as("mensaje en la DLQ tras agotar reintentos").isNotNull();
         verify(marcarPedidoSinStockUseCase, times(4)).execute(any(), any(), any());
-        assertThat(estadoDe(usuario)).isEqualTo(EstadoPedido.CREADO);
     }
 
     @Test
@@ -176,11 +176,15 @@ class PedidosStockIntegrationTest {
         return pedidoRepositoryPort.buscarPorUsuarioId(usuario).get(0);
     }
 
-    private Pedido crearPedidoPagado(String usuario) {
-        Pedido pedido = crearPedido(usuario);
-        publicar("pago.aprobado", UUID.randomUUID(), "{\"pagoId\":\"" + UUID.randomUUID() + "\",\"pedidoId\":\"" + pedido.getId().getValor()
+    private void publicarPagoAprobado(UUID pedidoId, String usuario) {
+        publicar("pago.aprobado", UUID.randomUUID(), "{\"pagoId\":\"" + UUID.randomUUID() + "\",\"pedidoId\":\"" + pedidoId
                 + "\",\"carritoId\":\"" + UUID.randomUUID() + "\",\"usuarioId\":\"" + usuario + "\",\"monto\":3000,\"moneda\":\"CLP\","
                 + "\"items\":[{\"productoId\":\"" + UUID.randomUUID() + "\",\"cantidad\":1}]}", RabbitMQConfig.EXCHANGE_PAGOS_EVENTS);
+    }
+
+    private Pedido crearPedidoPagado(String usuario) {
+        Pedido pedido = crearPedido(usuario);
+        publicarPagoAprobado(pedido.getId().getValor(), usuario);
         await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> assertThat(estadoDe(usuario)).isEqualTo(EstadoPedido.PAGADO));
         return pedido;
     }

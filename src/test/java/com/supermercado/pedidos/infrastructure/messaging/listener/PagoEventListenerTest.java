@@ -52,7 +52,7 @@ class PagoEventListenerTest {
     void aprobado_DeberiaDelegarEnElCasoDeUso_CuandoElPayloadEsValido() {
         listener.escucharPagoAprobado(envelope(aprobado("\"u1\"", "3000", "\"CLP\"")));
 
-        verify(marcarPedidoPagado).execute(EVENT_ID, PEDIDO_ID, "u1", new BigDecimal("3000"));
+        verify(marcarPedidoPagado).execute(EVENT_ID, PEDIDO_ID, "u1", new BigDecimal("3000"), "CLP");
     }
 
     @Test
@@ -65,7 +65,7 @@ class PagoEventListenerTest {
     @Test
     void aprobado_DeberiaAceptarUsuarioIdDeExactamente100Caracteres_YRechazarUnoDe101() {
         listener.escucharPagoAprobado(envelope(aprobado("\"" + "u".repeat(100) + "\"", "3000", "\"CLP\"")));
-        verify(marcarPedidoPagado).execute(any(), any(), any(), any());
+        verify(marcarPedidoPagado).execute(any(), any(), any(), any(), any());
         clearInvocations(marcarPedidoPagado);
 
         assertAprobadoRechazado(aprobado("\"" + "u".repeat(101) + "\"", "3000", "\"CLP\""));
@@ -90,7 +90,7 @@ class PagoEventListenerTest {
 
     @Test
     void aprobado_DeberiaRechazarSinReencolar_CuandoElPagoEsIncoherenteConElPedido() {
-        doThrow(new PagoInconsistenteException("usuario distinto")).when(marcarPedidoPagado).execute(any(), any(), any(), any());
+        doThrow(new PagoInconsistenteException("usuario distinto")).when(marcarPedidoPagado).execute(any(), any(), any(), any(), any());
 
         assertThatThrownBy(() -> listener.escucharPagoAprobado(envelope(aprobado("\"u1\"", "3000", "\"CLP\""))))
                 .isInstanceOf(AmqpRejectAndDontRequeueException.class);
@@ -99,7 +99,7 @@ class PagoEventListenerTest {
     @Test
     void aprobado_DeberiaPropagarElErrorTalCualParaQueSeReintente_CuandoElPedidoTodaviaNoExiste() {
         PedidoNoEncontradoException noVisible = new PedidoNoEncontradoException("Pedido no encontrado: " + PEDIDO_ID);
-        doThrow(noVisible).when(marcarPedidoPagado).execute(any(), any(), any(), any());
+        doThrow(noVisible).when(marcarPedidoPagado).execute(any(), any(), any(), any(), any());
 
         assertThatThrownBy(() -> listener.escucharPagoAprobado(envelope(aprobado("\"u1\"", "3000", "\"CLP\""))))
                 .isSameAs(noVisible);
@@ -108,7 +108,7 @@ class PagoEventListenerTest {
     @Test
     void aprobado_DeberiaPropagarElErrorTalCual_CuandoElFalloEsTransitorio() {
         IllegalStateException transitorio = new IllegalStateException("base de datos no disponible");
-        doThrow(transitorio).when(marcarPedidoPagado).execute(any(), any(), any(), any());
+        doThrow(transitorio).when(marcarPedidoPagado).execute(any(), any(), any(), any(), any());
 
         assertThatThrownBy(() -> listener.escucharPagoAprobado(envelope(aprobado("\"u1\"", "3000", "\"CLP\""))))
                 .isSameAs(transitorio);
@@ -123,7 +123,7 @@ class PagoEventListenerTest {
             assertThatThrownBy(() -> listener.escucharPagoAprobado(malo)).isInstanceOf(AmqpRejectAndDontRequeueException.class);
             assertThatThrownBy(() -> listener.escucharPagoRechazado(malo)).isInstanceOf(AmqpRejectAndDontRequeueException.class);
         }
-        verify(marcarPedidoPagado, never()).execute(any(), any(), any(), any());
+        verify(marcarPedidoPagado, never()).execute(any(), any(), any(), any(), any());
         verify(registrarPagoRechazado, never()).execute(any(), any(), any());
     }
 
@@ -160,7 +160,7 @@ class PagoEventListenerTest {
 
     private void assertAprobadoRechazado(JsonNode payload) {
         assertThatThrownBy(() -> listener.escucharPagoAprobado(envelope(payload))).isInstanceOf(AmqpRejectAndDontRequeueException.class);
-        verify(marcarPedidoPagado, never()).execute(any(), any(), any(), any());
+        verify(marcarPedidoPagado, never()).execute(any(), any(), any(), any(), any());
     }
 
     private void assertRechazadoRechazado(JsonNode payload) {

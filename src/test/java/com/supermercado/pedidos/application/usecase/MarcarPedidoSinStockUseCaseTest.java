@@ -10,7 +10,6 @@ import static org.mockito.Mockito.when;
 import com.supermercado.pedidos.application.port.EventoProcesadoPort;
 import com.supermercado.pedidos.application.port.PedidoRepositoryPort;
 import com.supermercado.pedidos.domain.exception.PagoInconsistenteException;
-import com.supermercado.pedidos.domain.exception.PedidoAunNoPagadoException;
 import com.supermercado.pedidos.domain.exception.PedidoNoEncontradoException;
 import com.supermercado.pedidos.domain.model.EstadoPedido;
 import com.supermercado.pedidos.domain.model.ItemPedido;
@@ -69,15 +68,14 @@ class MarcarPedidoSinStockUseCaseTest {
     }
 
     @Test
-    void execute_DeberiaLanzarUnaExcepcionTransitoria_CuandoElPedidoTodaviaEstaEnCreado() {
+    void execute_DeberiaPasarElPedidoCreadoASinStock_CuandoElRechazoLlegaAntesQueElPago() {
         pedidoExiste();
 
-        assertThatThrownBy(() -> useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID))
-                .isInstanceOf(PedidoAunNoPagadoException.class);
+        useCase.execute(EVENT_ID, pedidoId(), USUARIO_ID);
 
-        assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.CREADO);
-        verify(pedidoRepositoryPort, never()).guardar(any());
-        verify(eventoProcesadoPort, never()).marcarComoProcesado(any());
+        assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.SIN_STOCK);
+        verify(pedidoRepositoryPort).guardar(pedido);
+        verify(eventoProcesadoPort).marcarComoProcesado(EVENT_ID);
     }
 
     @Test
