@@ -47,7 +47,7 @@ public class PagoEventListener {
             try {
                 marcarPedidoPagadoUseCase.execute(envelope.eventId(), payload.pedidoId(), payload.usuarioId(), payload.monto(), payload.moneda());
             } catch (PagoInconsistenteException e) {
-                log.error("Evento descartado a la DLQ eventId={}: pago incoherente con el pedido ({})", envelope.eventId(), e.getMessage());
+                log.warn("Evento descartado a la DLQ eventId={}: pago incoherente con el pedido ({})", envelope.eventId(), e.getMessage());
                 throw new AmqpRejectAndDontRequeueException("Pago incoherente con el pedido: " + e.getMessage(), e);
             } catch (RuntimeException e) {
                 log.warn("Fallo al procesar evento eventId={}: {}", envelope.eventId(), e.toString());
