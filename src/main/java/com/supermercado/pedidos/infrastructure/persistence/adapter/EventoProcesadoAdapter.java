@@ -24,6 +24,7 @@ public class EventoProcesadoAdapter implements EventoProcesadoPort {
         EventoProcesadoEntity entity = new EventoProcesadoEntity();
         entity.setEventId(eventId);
         entity.setProcesadoEn(Instant.now());
-        springDataEventoProcesadoRepository.save(entity);
+        // saveAndFlush: la unica se comprueba aqui, antes de que el caso de uso guarde o publique nada.
+        springDataEventoProcesadoRepository.saveAndFlush(entity);
     }
 }

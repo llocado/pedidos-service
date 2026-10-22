@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.supermercado.pedidos.application.usecase.CrearPedidoDesdeCarritoUseCase;
 import com.supermercado.pedidos.domain.exception.PedidoSinItemsException;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
+import org.springframework.dao.DataIntegrityViolationException;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -112,6 +114,27 @@ class CarritoEventListenerTest {
         assertThatThrownBy(() -> listener.escucharCheckoutIniciado(
                 envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + ITEM_VALIDO + "]"))))
                 .isSameAs(transitorio);
+    }
+
+    @Test
+    void deberiaDescartarSinError_CuandoUnDuplicadoConcurrenteChocaConLaUnicaYElEventoYaEstaProcesado() {
+        doThrow(new DataIntegrityViolationException("pk_eventos_procesados")).when(crearPedido).execute(any(), any(), any(), any(), any());
+        when(crearPedido.yaProcesado(EVENT_ID)).thenReturn(true);
+
+        listener.escucharCheckoutIniciado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + ITEM_VALIDO + "]")));
+
+        verify(crearPedido).yaProcesado(EVENT_ID);
+    }
+
+    @Test
+    void deberiaPropagarElError_CuandoLaViolacionDeIntegridadNoEsUnDuplicado() {
+        DataIntegrityViolationException integridad = new DataIntegrityViolationException("otra constraint");
+        doThrow(integridad).when(crearPedido).execute(any(), any(), any(), any(), any());
+        when(crearPedido.yaProcesado(EVENT_ID)).thenReturn(false);
+
+        assertThatThrownBy(() -> listener.escucharCheckoutIniciado(
+                envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + ITEM_VALIDO + "]"))))
+                .isSameAs(integridad);
     }
 
     @Test

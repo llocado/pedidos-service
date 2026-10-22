@@ -30,6 +30,9 @@ Diseño completo del proyecto: `../app-productos/docs/ROADMAP.md`.
 - Idempotencia genérica por `eventId` vía tabla `eventos_procesados`
   (`EventoProcesadoPort`), compartida por los tres listeners (checkout,
   `pago.aprobado`, `pago.rechazado`).
+  En el checkout el `eventId` se **reserva antes de guardar y publicar** (`saveAndFlush`): con entregas
+  simultáneas del mismo evento la perdedora choca con la unica y se revierte sin publicar `pedido.creado`.
+  El listener lo descarta como duplicado si el evento ya está procesado.
 - `pago.aprobado` pasa el pedido a PAGADO (`MarcarPedidoPagadoUseCase`) tras
   validar usuario, monto y moneda (la del pedido es la de sus ítems); pedido inexistente => se REINTENTA (carrera con la
   publicación previa al commit de `pedido.creado`), datos incoherentes => DLQ.

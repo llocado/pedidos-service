@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -67,6 +68,13 @@ public class CarritoEventListener {
             } catch (IllegalArgumentException | PedidoSinItemsException e) {
                 log.warn("Evento descartado a la DLQ eventId={}: regla de dominio violada ({})", envelope.eventId(), e.getMessage());
                 throw new AmqpRejectAndDontRequeueException("Regla de dominio violada: " + e.getMessage(), e);
+            } catch (DataIntegrityViolationException e) {
+                if (crearPedidoDesdeCarritoUseCase.yaProcesado(envelope.eventId())) {
+                    log.info("Duplicado concurrente descartado eventId={}", envelope.eventId());
+                    return;
+                }
+                log.warn("Fallo de integridad al procesar evento eventId={}: {}", envelope.eventId(), e.toString());
+                throw e;
             } catch (RuntimeException e) {
                 log.warn("Fallo al procesar evento eventId={}: {}", envelope.eventId(), e.toString());
                 throw e;
