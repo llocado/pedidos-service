@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -68,6 +69,55 @@ class CarritoEventListenerTest {
     void deberiaRechazarSinReencolar_CuandoLaCantidadEsInvalida() {
         String item = ITEM_VALIDO.replace("\"cantidad\":2", "\"cantidad\":0");
         assertRechazado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + item + "]")));
+    }
+
+    @Test
+    void deberiaRechazarSinReencolar_CuandoLaMonedaNoSonTresLetrasMayusculas() {
+        for (String moneda : new String[] {"clp", "CL", "CLPX", "ñ12", "12$", ""}) {
+            String item = ITEM_VALIDO.replace("\"moneda\":\"CLP\"", "\"moneda\":\"" + moneda + "\"");
+            assertRechazado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + item + "]")));
+        }
+    }
+
+    @Test
+    void deberiaRechazarSinReencolar_CuandoLaCantidadSuperaElTope() {
+        String item = ITEM_VALIDO.replace("\"cantidad\":2", "\"cantidad\":" + (CarritoEventListener.MAX_CANTIDAD + 1));
+        assertRechazado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + item + "]")));
+    }
+
+    @Test
+    void deberiaAceptar_CuandoLaCantidadEsElTopeExacto() {
+        String item = ITEM_VALIDO.replace("\"cantidad\":2", "\"cantidad\":" + CarritoEventListener.MAX_CANTIDAD);
+        listener.escucharCheckoutIniciado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + item + "]")));
+
+        verify(crearPedido).execute(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void deberiaRechazarSinReencolar_CuandoElPrecioSuperaLaColumna() {
+        String item = ITEM_VALIDO.replace("\"precioUnitario\":1500", "\"precioUnitario\":10000000000.00");
+        assertRechazado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + item + "]")));
+    }
+
+    @Test
+    void deberiaRechazarSinReencolar_CuandoElPrecioTieneMasDeDosDecimales() {
+        String item = ITEM_VALIDO.replace("\"precioUnitario\":1500", "\"precioUnitario\":0.001");
+        assertRechazado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + item + "]")));
+    }
+
+    @Test
+    void deberiaAceptar_CuandoElPrecioTieneDosDecimalesOCeroDecimalesDeRelleno() {
+        for (String precio : new String[] {"1500.50", "1500.500", "1500.00", "9999999999.99"}) {
+            String item = ITEM_VALIDO.replace("\"precioUnitario\":1500", "\"precioUnitario\":" + precio).replace("\"cantidad\":2", "\"cantidad\":1");
+            listener.escucharCheckoutIniciado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + item + "]")));
+        }
+        verify(crearPedido, times(4)).execute(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void deberiaRechazarSinReencolar_CuandoLaSumaDelTotalSuperaLaColumna() {
+        String caro = ITEM_VALIDO.replace("\"precioUnitario\":1500", "\"precioUnitario\":9999999999.99").replace("\"cantidad\":2", "\"cantidad\":1");
+        assertRechazado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + caro + "," + caro + "]")));
     }
 
     @Test

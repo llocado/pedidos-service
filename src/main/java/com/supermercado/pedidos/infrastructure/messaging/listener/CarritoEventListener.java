@@ -7,8 +7,10 @@ import com.supermercado.pedidos.infrastructure.messaging.config.RabbitMQConfig;
 import com.supermercado.pedidos.infrastructure.messaging.dto.CarritoCheckoutIniciadoPayload;
 import com.supermercado.pedidos.infrastructure.messaging.dto.CarritoCheckoutIniciadoPayload.ItemEventoDto;
 import com.supermercado.pedidos.infrastructure.messaging.dto.EventEnvelope;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -35,7 +37,11 @@ public class CarritoEventListener {
 
     static final int MAX_ITEMS = 500;
     static final int MAX_TEXTO = 255;
-    static final int MAX_MONEDA = 3;
+    static final int MAX_CANTIDAD = 10_000;
+    static final int MAX_ESCALA = 2;
+    /** Lo que cabe en numeric(12,2): un importe mayor desbordaria la columna y el mensaje se reintentaria en vano. */
+    static final BigDecimal MAX_IMPORTE = new BigDecimal("9999999999.99");
+    private static final Pattern MONEDA = Pattern.compile("^[A-Z]{3}$");
 
     private final CrearPedidoDesdeCarritoUseCase crearPedidoDesdeCarritoUseCase;
     private final ObjectMapper objectMapper;
@@ -107,21 +113,28 @@ public class CarritoEventListener {
     private static String validarItems(List<ItemEventoDto> items) {
         if (items == null || items.isEmpty()) return "sin items";
         if (items.size() > MAX_ITEMS) return "demasiados items";
+        BigDecimal total = BigDecimal.ZERO;
         for (ItemEventoDto item : items) {
             String motivo = validarItem(item);
             if (motivo != null) return motivo;
+            total = total.add(item.precioUnitario().multiply(BigDecimal.valueOf(item.cantidad())));
         }
-        return null;
+        return total.compareTo(MAX_IMPORTE) > 0 ? "total demasiado grande" : null;
     }
 
     private static String validarItem(ItemEventoDto item) {
         if (item == null) return "item nulo";
         if (item.productoId() == null) return "item sin productoId";
         if (textoInvalido(item.nombre(), MAX_TEXTO)) return "item con nombre invalido";
-        if (item.precioUnitario() == null || item.precioUnitario().signum() < 0) return "item con precio invalido";
-        if (textoInvalido(item.moneda(), MAX_MONEDA)) return "item con moneda invalida";
-        if (item.cantidad() <= 0) return "item con cantidad invalida";
+        if (precioInvalido(item.precioUnitario())) return "item con precio invalido";
+        if (item.moneda() == null || !MONEDA.matcher(item.moneda()).matches()) return "item con moneda invalida";
+        if (item.cantidad() <= 0 || item.cantidad() > MAX_CANTIDAD) return "item con cantidad invalida";
         return null;
+    }
+
+    private static boolean precioInvalido(BigDecimal precio) {
+        return precio == null || precio.signum() < 0 || precio.compareTo(MAX_IMPORTE) > 0
+                || precio.stripTrailingZeros().scale() > MAX_ESCALA;
     }
 
     private static boolean textoInvalido(String texto, int maximo) {
