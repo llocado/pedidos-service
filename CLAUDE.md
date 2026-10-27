@@ -33,6 +33,9 @@ Diseño completo del proyecto: `../app-productos/docs/ROADMAP.md`.
   En el checkout el `eventId` se **reserva antes de guardar y publicar** (`saveAndFlush`): con entregas
   simultáneas del mismo evento la perdedora choca con la unica y se revierte sin publicar `pedido.creado`.
   El listener lo descarta como duplicado si el evento ya está procesado.
+  `PedidoPersistenceAdapter.guardar` usa `saveAndFlush`: un dato que no cabe en la columna falla ANTES de que el caso de uso publique
+  `pedido.creado` (con `save`, el INSERT se difería al commit y el evento ya había salido). El listener valida lo mismo que pagos
+  (moneda ^[A-Z]{3}$, una sola moneda, total > 0, largos de las columnas): lo que pagos rechazaría no debe crear un pedido que se queda en `CREADO`.
 - `pago.aprobado` pasa el pedido a PAGADO (`MarcarPedidoPagadoUseCase`) tras
   validar usuario, monto y moneda (la del pedido es la de sus ítems); pedido inexistente => se REINTENTA (carrera con la
   publicación previa al commit de `pedido.creado`), datos incoherentes => DLQ.

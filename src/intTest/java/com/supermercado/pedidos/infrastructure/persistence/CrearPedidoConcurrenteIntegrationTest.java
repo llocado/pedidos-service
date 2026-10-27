@@ -1,7 +1,9 @@
 package com.supermercado.pedidos.infrastructure.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -94,5 +96,20 @@ class CrearPedidoConcurrenteIntegrationTest {
         Integer pedidos = jdbcTemplate.queryForObject("select count(*) from pedidos where carrito_id_origen = ?", Integer.class, carritoId);
         assertThat(pedidos).isEqualTo(1);
         verify(pedidoEventPublisherPort, times(1)).publicarPedidoCreado(any(Pedido.class), any());
+    }
+
+    @Test
+    void unNombreQueNoCabeEnLaColumna_DeberiaFallarAntesDePublicarPedidoCreado() {
+        UUID carritoId = UUID.randomUUID();
+        // items_pedido.nombre es varchar(150): con 200 caracteres el INSERT falla. Si el INSERT se difiriera al commit, el evento ya habria salido.
+        List<ItemCarritoComando> items = List.of(
+                new ItemCarritoComando(UUID.randomUUID(), "n".repeat(200), new BigDecimal("1500"), "CLP", 1));
+
+        assertThatThrownBy(() -> crearPedidoDesdeCarritoUseCase.execute(UUID.randomUUID(), UUID.randomUUID(), carritoId, "usuario-largo", items))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        verify(pedidoEventPublisherPort, never()).publicarPedidoCreado(any(Pedido.class), any());
+        Integer pedidos = jdbcTemplate.queryForObject("select count(*) from pedidos where carrito_id_origen = ?", Integer.class, carritoId);
+        assertThat(pedidos).isZero();
     }
 }

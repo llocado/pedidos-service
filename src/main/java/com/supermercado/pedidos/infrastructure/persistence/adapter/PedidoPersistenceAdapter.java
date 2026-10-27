@@ -32,7 +32,9 @@ public class PedidoPersistenceAdapter implements PedidoRepositoryPort {
 
         pedidoEntityMapper.volcarEnEntidad(pedido, entity);
 
-        PedidoEntity guardada = springDataPedidoRepository.save(entity);
+        // saveAndFlush: el INSERT/UPDATE se ejecuta aqui y no al confirmar la transaccion. Asi un dato que no cabe en la
+        // columna (o un conflicto de version) falla ANTES de que el caso de uso publique pedido.creado.
+        PedidoEntity guardada = springDataPedidoRepository.saveAndFlush(entity);
         return pedidoEntityMapper.toDomain(guardada);
     }
 

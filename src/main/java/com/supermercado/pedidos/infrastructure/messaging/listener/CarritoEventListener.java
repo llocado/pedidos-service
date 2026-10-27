@@ -36,7 +36,9 @@ import tools.jackson.databind.ObjectMapper;
 public class CarritoEventListener {
 
     static final int MAX_ITEMS = 500;
-    static final int MAX_TEXTO = 255;
+    /** Largos de las columnas (pedidos.usuario_id varchar(100), items_pedido.nombre varchar(150)): un texto mas largo no cabe. */
+    static final int MAX_USUARIO_ID = 100;
+    static final int MAX_NOMBRE = 150;
     static final int MAX_CANTIDAD = 10_000;
     static final int MAX_ESCALA = 2;
     /** Lo que cabe en numeric(12,2): un importe mayor desbordaria la columna y el mensaje se reintentaria en vano. */
@@ -106,7 +108,7 @@ public class CarritoEventListener {
 
     private static String validarCabecera(CarritoCheckoutIniciadoPayload payload) {
         if (payload.carritoId() == null) return "falta carritoId";
-        if (textoInvalido(payload.usuarioId(), MAX_TEXTO)) return "usuarioId ausente o demasiado largo";
+        if (textoInvalido(payload.usuarioId(), MAX_USUARIO_ID)) return "usuarioId ausente o demasiado largo";
         return null;
     }
 
@@ -119,13 +121,16 @@ public class CarritoEventListener {
             if (motivo != null) return motivo;
             total = total.add(item.precioUnitario().multiply(BigDecimal.valueOf(item.cantidad())));
         }
+        // pagos-service rechaza lo mismo (monedas mezcladas, total 0): si aqui pasara, el pedido quedaria en CREADO para siempre.
+        if (items.stream().map(ItemEventoDto::moneda).distinct().count() > 1) return "items con monedas distintas";
+        if (total.signum() <= 0) return "total debe ser mayor a cero";
         return total.compareTo(MAX_IMPORTE) > 0 ? "total demasiado grande" : null;
     }
 
     private static String validarItem(ItemEventoDto item) {
         if (item == null) return "item nulo";
         if (item.productoId() == null) return "item sin productoId";
-        if (textoInvalido(item.nombre(), MAX_TEXTO)) return "item con nombre invalido";
+        if (textoInvalido(item.nombre(), MAX_NOMBRE)) return "item con nombre invalido";
         if (precioInvalido(item.precioUnitario())) return "item con precio invalido";
         if (item.moneda() == null || !MONEDA.matcher(item.moneda()).matches()) return "item con moneda invalida";
         if (item.cantidad() <= 0 || item.cantidad() > MAX_CANTIDAD) return "item con cantidad invalida";

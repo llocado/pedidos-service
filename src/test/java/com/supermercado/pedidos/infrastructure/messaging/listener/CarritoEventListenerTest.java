@@ -3,6 +3,7 @@ package com.supermercado.pedidos.infrastructure.messaging.listener;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -118,6 +119,51 @@ class CarritoEventListenerTest {
     void deberiaRechazarSinReencolar_CuandoLaSumaDelTotalSuperaLaColumna() {
         String caro = ITEM_VALIDO.replace("\"precioUnitario\":1500", "\"precioUnitario\":9999999999.99").replace("\"cantidad\":2", "\"cantidad\":1");
         assertRechazado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + caro + "," + caro + "]")));
+    }
+
+    @Test
+    void deberiaAceptarUsuarioIdDe100Caracteres_YRechazarUnoDe101() {
+        listener.escucharCheckoutIniciado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"" + "u".repeat(100) + "\"", "[" + ITEM_VALIDO + "]")));
+        verify(crearPedido).execute(any(), any(), any(), any(), any());
+        clearInvocations(crearPedido);
+
+        assertRechazado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"" + "u".repeat(101) + "\"", "[" + ITEM_VALIDO + "]")));
+    }
+
+    @Test
+    void deberiaAceptarNombreDe150Caracteres_YRechazarUnoDe151() {
+        String nombre150 = ITEM_VALIDO.replace("\"nombre\":\"Manzana\"", "\"nombre\":\"" + "n".repeat(CarritoEventListener.MAX_NOMBRE) + "\"");
+        listener.escucharCheckoutIniciado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + nombre150 + "]")));
+        verify(crearPedido).execute(any(), any(), any(), any(), any());
+        clearInvocations(crearPedido);
+
+        String nombre151 = ITEM_VALIDO.replace("\"nombre\":\"Manzana\"", "\"nombre\":\"" + "n".repeat(CarritoEventListener.MAX_NOMBRE + 1) + "\"");
+        assertRechazado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + nombre151 + "]")));
+    }
+
+    @Test
+    void deberiaRechazarSinReencolar_CuandoLosItemsTienenMonedasDistintas() {
+        String usd = ITEM_VALIDO.replace("\"moneda\":\"CLP\"", "\"moneda\":\"USD\"");
+        assertRechazado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + ITEM_VALIDO + "," + usd + "]")));
+    }
+
+    @Test
+    void deberiaAceptarVariosItemsDeLaMismaMoneda() {
+        listener.escucharCheckoutIniciado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + ITEM_VALIDO + "," + ITEM_VALIDO + "]")));
+        verify(crearPedido).execute(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void deberiaRechazarSinReencolar_CuandoElTotalEsCero() {
+        String gratis = ITEM_VALIDO.replace("\"precioUnitario\":1500", "\"precioUnitario\":0");
+        assertRechazado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + gratis + "]")));
+    }
+
+    @Test
+    void deberiaAceptarUnItemGratisSiElTotalDelPedidoEsPositivo() {
+        String gratis = ITEM_VALIDO.replace("\"precioUnitario\":1500", "\"precioUnitario\":0");
+        listener.escucharCheckoutIniciado(envelope(payload("\"" + UUID.randomUUID() + "\"", "\"u1\"", "[" + gratis + "," + ITEM_VALIDO + "]")));
+        verify(crearPedido).execute(any(), any(), any(), any(), any());
     }
 
     @Test
