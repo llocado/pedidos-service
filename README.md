@@ -5,8 +5,8 @@ mismo estilo que `productos-service` y `carrito-service`: casos de uso en
 `application/usecase`, puertos en `application/port`, adaptadores en
 `infrastructure/*`.
 
-Ver `docs/ROADMAP.md` en el repo `app-productos` para el diseño completo del
-proyecto (decisiones de arquitectura, mapa de servicios, contrato de eventos).
+Este servicio es una pieza de un sistema mayor (catálogo, carrito, pedidos, pagos, Keycloak y tienda web). El diseño completo, el diagrama
+de eventos y la demo de un comando están en el repo [`supermercado`](https://github.com/llocado/supermercado).
 
 ## Decisiones de diseño propias de este servicio
 
@@ -15,10 +15,10 @@ proyecto (decisiones de arquitectura, mapa de servicios, contrato de eventos).
   servicio solo expone lectura por HTTP (`GET /api/pedidos`, `GET /api/pedidos/{id}`).
 - **`pedidos-service` no importa el dominio de `carrito-service` ni de
   `productos-service`.** `Pedido`/`ItemPedido` son su propio modelo, poblado
-  desde el payload del evento — duplicación intencional, no un descuido (ver
-  ROADMAP.md).
+  desde el payload del evento — duplicación intencional, no un descuido (cada
+  servicio es dueño de su modelo).
 - **Sin estado terminal de rechazo.** Si el pago falla, el pedido simplemente
-  queda en `CREADO` (decisión ya cerrada en el ROADMAP: alcanza con "pedido
+  queda en `CREADO` (decisión de diseño cerrada: alcanza con "pedido
   pendiente" para el alcance de este proyecto).
 - **Idempotencia genérica por `eventId`.** Tabla `eventos_procesados`
   (`EventoProcesadoPort`), compartida por todos los listeners del servicio

@@ -1,6 +1,6 @@
 # Eventos de pedidos-service
 
-Documentacion de contrato para el bus de eventos (RabbitMQ), segun lo definido en `app-productos/docs/ROADMAP.md` (seccion "Contrato de eventos"). Cada evento va envuelto en el envelope comun (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `producer`, `correlationId`, `payload`).
+Documentacion de contrato para el bus de eventos (RabbitMQ), segun el contrato comun del proyecto. Cada evento va envuelto en el envelope comun (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `producer`, `correlationId`, `payload`).
 
 ## Publica (productor)
 
