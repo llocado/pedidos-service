@@ -53,6 +53,12 @@ spring:
           multiplier: 2
           max-interval: 10s
 
+app:
+  cors:
+    # Origenes (separados por coma) cuyas paginas web pueden llamar a esta API desde el navegador. Por defecto, solo el
+    # servidor de desarrollo de tienda-web. En produccion: el dominio real de la tienda (nunca "*").
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+
 server:
   port: ${SERVER_PORT:8082}
 

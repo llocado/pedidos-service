@@ -85,3 +85,9 @@ publicar el mensaje directo en RabbitMQ (UI en `localhost:15672`, exchange
 
 - Repo en GitHub (`llocado/pedidos-service`), rama `main` con el código
   completo.
+
+## CORS (para tienda-web)
+
+`infrastructure/config/CorsConfig` + `.cors(...)` en `SecurityConfig`: solo `GET` y `OPTIONS` en `/api/**` (los pedidos son de solo lectura por la API), origen
+de `app.cors.allowed-origins` (`CORS_ORIGINS`, por defecto `http://localhost:5173`), nunca `*`, sin cookies. Debe vivir en Spring Security: el *preflight*
+no lleva token. Test: `PedidosIntegrationTest.preflightCors_*`.

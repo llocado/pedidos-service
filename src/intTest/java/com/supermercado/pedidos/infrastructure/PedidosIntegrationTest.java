@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -68,6 +70,29 @@ class PedidosIntegrationTest {
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
+
+    @Test
+    void preflightCors_DeberiaPermitirElOrigenDeLaTienda_SinExigirToken() throws Exception {
+        mockMvc.perform(options("/api/pedidos")
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "GET")
+                        .header("Access-Control-Request-Headers", "authorization"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
+    }
+
+    @Test
+    void preflightCors_DeberiaRechazarUnOrigenAjeno_YLasEscrituras() throws Exception {
+        mockMvc.perform(options("/api/pedidos")
+                        .header("Origin", "http://sitio-malicioso.example")
+                        .header("Access-Control-Request-Method", "GET"))
+                .andExpect(status().isForbidden())
+                .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+        mockMvc.perform(options("/api/pedidos")
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "DELETE"))
+                .andExpect(status().isForbidden());
+    }
 
     @Test
     void checkoutIniciado_DeberiaCrearElPedidoYQuedarConsultableViaRest() {
