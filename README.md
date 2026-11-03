@@ -1,5 +1,7 @@
 # pedidos-service
 
+[![Tests](https://github.com/llocado/pedidos-service/actions/workflows/tests.yml/badge.svg)](https://github.com/llocado/pedidos-service/actions/workflows/tests.yml)
+
 Microservicio de pedidos del proyecto supermercado. Arquitectura hexagonal,
 mismo estilo que `productos-service` y `carrito-service`: casos de uso en
 `application/usecase`, puertos en `application/port`, adaptadores en
