@@ -62,6 +62,13 @@ app:
 server:
   port: ${SERVER_PORT:8082}
 
+purga:
+  # Retencion de eventos_procesados (idempotencia): una pasada al dia. El plazo debe ser mayor que lo que un duplicado
+  # puede esperar en una cola (por ejemplo, con un consumidor caido).
+  cron: ${PURGA_CRON:0 30 3 * * *}
+  eventos-procesados-dias: ${PURGA_EVENTOS_PROCESADOS_DIAS:30}
+  lote: ${PURGA_LOTE:1000}
+
 logging:
   level:
     root: INFO

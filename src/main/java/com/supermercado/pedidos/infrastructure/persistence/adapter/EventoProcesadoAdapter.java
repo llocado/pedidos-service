@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
@@ -26,5 +27,11 @@ public class EventoProcesadoAdapter implements EventoProcesadoPort {
         entity.setProcesadoEn(Instant.now());
         // saveAndFlush: la unica se comprueba aqui, antes de que el caso de uso guarde o publique nada.
         springDataEventoProcesadoRepository.saveAndFlush(entity);
+    }
+
+    @Override
+    @Transactional
+    public int eliminarProcesadosAnterioresA(Instant limite, int lote) {
+        return springDataEventoProcesadoRepository.eliminarAnterioresA(limite, lote);
     }
 }

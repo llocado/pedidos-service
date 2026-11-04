@@ -3,3 +3,5 @@ databaseChangeLog:
       file: db/changelog/changes/001-crear-tablas-pedidos.yaml
   - include:
       file: db/changelog/changes/002-agregar-version-a-pedidos.yaml
+  - include:
+      file: db/changelog/changes/003-indice-eventos-procesados-por-fecha.yaml
